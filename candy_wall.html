@@ -1,0 +1,2751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>Candy Wall Customizer & Rental Calculator</title>
+
+  <!-- External Styling & Icon Libraries -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Google Fonts for Editorial Luxury Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Custom CSS for Architectural Shadows, Acrylic Glare, and Custom Scrollbars -->
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f7f6f2;
+      color: #292524;
+    }
+    .font-serif {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+
+    /* Architectural backdrop & lighting */
+    .arch-backdrop {
+      background: radial-gradient(circle at 50% 25%, #ffffff 0%, #faf8f5 65%, #f1ebe2 100%);
+      box-shadow: 0 25px 60px -15px rgba(60, 50, 40, 0.12),
+                  0 12px 30px -10px rgba(0, 0, 0, 0.05),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      transition: box-shadow 0.4s ease, border-color 0.4s ease;
+    }
+
+    /* Acrylic 3D Box Styling */
+    .acrylic-bin {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(245, 245, 248, 0.82) 100%);
+      backdrop-filter: blur(8px);
+      position: relative;
+    }
+    .acrylic-glare {
+      background: linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.1) 45%, rgba(255,255,255,0) 50%, rgba(255,255,255,0.2) 100%);
+      border-radius: inherit;
+    }
+    .shadow-acrylic {
+      box-shadow: 0 12px 24px -6px rgba(45, 35, 25, 0.12),
+                  0 4px 8px -2px rgba(45, 35, 25, 0.06),
+                  inset 0 1px 1px rgba(255, 255, 255, 0.95),
+                  inset 0 -2px 4px rgba(0, 0, 0, 0.04);
+    }
+    .acrylic-shelf-lip {
+      background: linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(225,225,230,0.6));
+    }
+
+    /* Custom thin scrollbars */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f0ec;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #d6d3d1;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #a8a29e;
+    }
+
+    html { color-scheme: light; -webkit-text-size-adjust: 100%; }
+    body { overflow-x: hidden; padding-top: env(safe-area-inset-top, 0px); }
+    .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+    .scrollbar-none::-webkit-scrollbar { display: none; }
+    /* Room for the mobile bottom bar */
+    @media (max-width: 1023px) {
+      body { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+    }
+    /* Inputs at 16px on phones so iOS doesn't zoom when tapped */
+    @media (max-width: 639px) {
+      input[type="text"], input[type="email"], input[type="date"], input[type="number"], input[type="password"] { font-size: 16px; }
+    }
+
+    /* Keep page still behind pop-ups; keep scrolling inside them */
+    html { scrollbar-gutter: stable; }
+    #booking-modal, #inventory-modal, #pin-modal { overscroll-behavior: contain; }
+    #booking-modal .overflow-y-auto, #inventory-modal .overflow-y-auto { overscroll-behavior: contain; }
+
+    /* Empty date field shows a sample instead of a blank box */
+    input[type="date"].is-empty { color: transparent; }
+    input[type="date"].is-empty::-webkit-datetime-edit { color: transparent; }
+
+    /* Date field: same look and left alignment as the other inputs (fixes Safari/iPhone) */
+    input[type="date"] {
+      -webkit-appearance: none; appearance: none;
+      background-color: #fff; text-align: left; min-width: 0; min-height: 42px; display: block;
+    }
+    input[type="date"]::-webkit-date-and-time-value { text-align: left; margin: 0; }
+    input[type="date"]::-webkit-datetime-edit { padding: 0; }
+    #brand-logo-container { -webkit-tap-highlight-color: transparent; user-select: none; }
+
+    /* Admin tabs: never shrink, stay one row, scroll sideways */
+    #admin-tabs-scroll { padding-top: 0 !important; }
+    #admin-tabs-scroll > button {
+      flex-shrink: 0;
+      padding-top: 0.75rem; padding-bottom: 0.75rem;
+      border-top: 2px solid transparent !important; /* balances the underline so text sits dead center */
+      line-height: 1.25;
+    }
+    #admin-tabs-scroll { cursor: grab; scroll-behavior: smooth; }
+    #admin-tabs-scroll.dragging { cursor: grabbing; scroll-behavior: auto; }
+
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.4); }
+      70% { box-shadow: 0 0 0 8px rgba(217, 119, 6, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0); }
+    }
+    .active-slot-pulse {
+      animation: pulse-ring 2s infinite cubic-bezier(0.45, 0, 0.55, 1);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between selection:bg-amber-200">
+  
+  <!-- ================= HEADER WITH BRAND AND DIRECT ADMIN BUTTON ================= -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-stone-200/80 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-3 min-w-0">
+        <!-- Brand Logo Icon / Image Container (Customizable via Admin) -->
+        <div id="brand-logo-container" class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-white shadow-sm overflow-hidden shrink-0">
+          <i id="brand-icon-el" data-lucide="candy" class="w-5 h-5"></i>
+          <img id="brand-logo-img" src="" alt="Brand Logo" class="w-full h-full object-cover hidden">
+        </div>
+        <div class="min-w-0">
+          <h1 id="brand-name-display" class="text-base sm:text-lg font-serif font-bold text-stone-900 leading-none truncate">
+            Sweet Treats Co.
+          </h1>
+          <p id="brand-tagline-display" class="text-[10px] sm:text-[11px] font-medium tracking-wide text-amber-800 uppercase mt-0.5 truncate">
+            Interactive Candy Wall & Rental Builder
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Actions and Order Total Only (No visible admin button for public visitors) -->
+      <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        <div class="bg-stone-100/90 px-3 py-1.5 rounded-full border border-stone-200/80 flex items-center gap-2">
+          <span class="text-[11px] uppercase tracking-wider text-stone-500 font-semibold">Total</span>
+          <span id="header-total" class="text-xs sm:text-sm font-bold text-amber-800 font-mono">$150.00</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full flex-1">
+    
+    <!-- Top Help / Status Strip -->
+    <div class="mb-5 sm:mb-6 flex flex-row items-center justify-between gap-3 bg-stone-100/80 border border-stone-200/90 rounded-2xl px-4 py-2.5 text-xs text-stone-600">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
+        <span id="banner-text" class="truncate min-w-0">Targeting: <strong>Bin 1</strong>. Select a candy below or drag onto the wall to load.</span>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <span class="text-stone-400 font-medium hidden sm:inline">9 Compartment Arch</span>
+        <span class="text-stone-300 hidden sm:inline">|</span>
+        <span id="bins-filled-counter" class="font-bold text-stone-700 whitespace-nowrap">0 / 9 Bins Filled</span>
+      </div>
+    </div>
+
+    <!-- Main Grid: Left Display Arch, Right Customizer Controls -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- ================= LEFT COLUMN: TALL ARCHED WALL DISPLAY ================= -->
+      <div class="lg:col-span-6 xl:col-span-7 flex flex-col items-center">
+        
+        <!-- Controls Toolbar above the Arch: Clear Only (removed 'Tap slot to select target') -->
+        <div class="w-full max-w-md flex items-center justify-start mb-3 px-1 text-xs">
+          <button onclick="clearAllBins()" class="px-2.5 py-1 bg-white hover:bg-red-50 text-stone-600 hover:text-red-700 rounded-lg border border-stone-200 shadow-2xs font-medium flex items-center gap-1 transition">
+            <svg class="w-3.5 h-3.5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+            <span>Clear Wall</span>
+          </button>
+        </div>
+
+        <!-- The Tall Arched Display Board -->
+        <div class="w-full max-w-md relative flex justify-center">
+          <div id="arch-display-board" class="arch-backdrop w-full min-h-[600px] sm:min-h-[720px] rounded-t-[300px] rounded-b-2xl border-4 border-white/90 p-4 sm:p-7 flex flex-col items-center relative overflow-hidden transition-all duration-500">
+            
+            <!-- Plain, Elegant Top of Arch -->
+            <div class="w-full pt-12 sm:pt-20 pb-5 sm:pb-6 flex flex-col items-center text-center">
+              <div class="w-12 h-1 bg-stone-300/40 rounded-full mb-1"></div>
+            </div>
+
+            <!-- 3x3 Acrylic Bins Container -->
+            <div class="w-full grid grid-cols-3 gap-2.5 sm:gap-4 my-auto relative z-10" id="wall-grid">
+              <!-- Dynamically populated by renderBins() -->
+            </div>
+
+            <!-- Bottom Base Kickplate (Configurable via Admin) -->
+            <div class="w-full mt-auto pt-6 pb-2 border-t border-stone-200/50 flex items-center justify-between text-[10px] text-stone-400 font-medium tracking-wider uppercase">
+              <span id="footer-left-display">Modular Acrylic Display</span>
+              <span id="footer-right-display">24-Hour Rental</span>
+            </div>
+
+            <!-- Soft background architectural gradient highlights -->
+            <div class="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-white/60 to-transparent pointer-events-none"></div>
+          </div>
+        </div>
+
+        <!-- Live Capacity Bar below Arch -->
+        <div class="w-full max-w-md mt-4 bg-white p-3 rounded-2xl border border-stone-200 shadow-xs flex items-center gap-3">
+          <span class="text-xs font-semibold text-stone-600 whitespace-nowrap">Bin Capacity</span>
+          <div class="flex-1 bg-stone-100 rounded-full h-2 overflow-hidden border border-stone-200/80">
+            <div id="progress-bar" class="bg-gradient-to-r from-amber-500 to-amber-600 h-full rounded-full transition-all duration-300" style="width: 0%;"></div>
+          </div>
+          <span id="progress-percent" class="text-xs font-bold text-stone-700 font-mono">0%</span>
+        </div>
+
+      </div>
+
+      <!-- ================= RIGHT COLUMN: CANDY MENU & ORDER ENGINE ================= -->
+      <!-- lg:pt-[41px] aligns the top of the menu card with the arched wall across desktop views -->
+      <div class="lg:col-span-6 xl:col-span-5 space-y-6 lg:pt-[41px]">
+
+        <!-- CANDY SELECTION CATALOG -->
+        <div class="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-sm">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 id="menu-title-display" class="text-lg font-serif font-bold text-stone-900 leading-tight">
+                Candy Confection Menu
+              </h2>
+              <p id="menu-subtitle-display" class="text-xs text-stone-500 mt-0.5">Click to fill targeted bin or drag directly onto the wall</p>
+            </div>
+          </div>
+
+          <!-- Category Filter Tabs -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3 scrollbar-none text-xs" id="category-tabs">
+            <button onclick="filterCatalog('all')" class="cat-pill active px-3 py-1.5 rounded-full font-medium transition bg-stone-900 text-white" data-cat="all">All</button>
+            <button onclick="filterCatalog('gummy')" class="cat-pill px-3 py-1.5 rounded-full font-medium transition bg-stone-100 text-stone-600 hover:bg-stone-200" data-cat="gummy">Gummies & Sour</button>
+            <button onclick="filterCatalog('chocolate')" class="cat-pill px-3 py-1.5 rounded-full font-medium transition bg-stone-100 text-stone-600 hover:bg-stone-200" data-cat="chocolate">Chocolates</button>
+            <button onclick="filterCatalog('gourmet')" class="cat-pill px-3 py-1.5 rounded-full font-medium transition bg-stone-100 text-stone-600 hover:bg-stone-200" data-cat="gourmet">Artisan</button>
+          </div>
+
+          <!-- Candy Cards Grid -->
+          <div class="grid grid-cols-2 gap-2.5 sm:gap-3 max-h-[380px] sm:max-h-[420px] overflow-y-auto pr-1.5 custom-scrollbar" id="candy-catalog-grid">
+            <!-- Dynamically populated by renderCatalog() -->
+          </div>
+        </div>
+
+        <!-- EVENT EXTRAS & UPGRADES -->
+        <div class="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-stone-100 pb-3">
+            <div>
+              <h3 class="font-serif font-bold text-stone-900 text-base flex items-center gap-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-amber-600"></i>
+                <span>Event Add-Ons & Services</span>
+              </h3>
+              <p class="text-[11px] text-stone-400 font-medium">Customize your rental experience with optional upgrades</p>
+            </div>
+          </div>
+
+          <!-- Dynamically Rendered Addons List -->
+          <div id="customer-addons-container" class="space-y-2">
+            <!-- Dynamically populated by renderCustomerAddons() -->
+          </div>
+        </div>
+
+        <!-- REAL-TIME PRICE SUMMARY & INVOICE -->
+        <div class="bg-stone-900 text-stone-100 rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
+          <div class="flex items-center justify-between border-b border-stone-800 pb-3">
+            <div>
+              <h3 id="estimate-title-display" class="font-serif font-bold text-lg text-white">Live Rental Estimate</h3>
+              <p id="estimate-subtitle-display" class="text-[11px] text-stone-400">Includes 24hr display setup, acrylic bins, & selections</p>
+            </div>
+            <span class="text-[11px] whitespace-nowrap shrink-0 ml-3 bg-amber-500/20 text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/30">Instant Quote</span>
+          </div>
+
+          <div class="space-y-2.5 text-xs text-stone-300">
+            <div class="flex justify-between">
+              <span>Base Arch Wall Setup & 9 Acrylic Bins</span>
+              <span class="font-semibold text-white font-mono" id="base-rental-display">$150.00</span>
+            </div>
+            <div class="flex justify-between">
+              <span id="candy-line-label">Selected Candies (0/9 Bins)</span>
+              <span class="font-semibold text-amber-400 font-mono" id="candy-subtotal">$0.00</span>
+            </div>
+
+            <!-- Add-ons Line Items Container -->
+            <div id="addons-summary-wrapper" class="space-y-1.5 pt-1.5 border-t border-stone-800 text-[11px] hidden">
+              <!-- Dynamically populated by recalculate() -->
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-stone-800 flex items-end justify-between">
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-stone-400 font-semibold">Estimated Total</div>
+              <div class="text-2xl sm:text-3xl font-serif font-bold text-white mt-0.5 font-mono" id="grand-total">$150.00</div>
+            </div>
+            <button onclick="openBookingModal()" class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-semibold text-xs rounded-xl shadow-lg hover:shadow-amber-500/30 transition transform active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer">
+              <span>Reserve Setup</span>
+              <svg class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- ================= INVENTORY & SERVICES MANAGER MODAL (ADMIN MODE) ================= -->
+  <div id="inventory-modal" class="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-5">
+    <div class="bg-white rounded-3xl max-w-4xl w-full h-[88vh] max-h-[860px] shadow-2xl border border-stone-200 flex flex-col overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="px-4 sm:px-6 py-4 border-b border-stone-200/80 flex items-center justify-between gap-3 bg-stone-50/90">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-800">
+            <i data-lucide="package-search" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-serif font-bold text-xl text-stone-900">Admin Inventory & Business Manager</h3>
+            <p class="text-xs text-stone-500">Configure candy options, rates, services, booth footer, and brand profile</p>
+          </div>
+        </div>
+        <button onclick="closeInventoryModal()" class="p-1.5 rounded-full hover:bg-stone-200 text-stone-500 transition cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Admin Tabs Navigation -->
+      <div class="relative shrink-0 border-b border-stone-200 bg-stone-50/50">
+        <button id="admin-tabs-left" type="button" onclick="scrollAdminTabs(-1)" aria-label="Scroll tabs left" style="display:none" class="absolute left-0 top-0 bottom-0 z-10 w-9 items-center justify-start pl-1.5 bg-gradient-to-r from-stone-50 via-stone-50/90 to-transparent text-stone-600 hover:text-stone-900 cursor-pointer"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+      <div id="admin-tabs-scroll" class="flex items-center gap-1 sm:gap-2 px-4 sm:px-6 pt-3 text-xs font-semibold overflow-x-auto scrollbar-none select-none">
+        <button id="admin-tab-btn-candies" onclick="switchAdminTab('candies')" class="px-4 py-2.5 border-b-2 border-stone-900 text-stone-900 flex items-center gap-2 transition whitespace-nowrap cursor-pointer">
+          <i data-lucide="candy" class="w-4 h-4 text-amber-600"></i>
+          <span>Candy Catalog (<span id="admin-candy-tab-count">0</span>)</span>
+        </button>
+        <button id="admin-tab-btn-addons" onclick="switchAdminTab('addons')" class="px-4 py-2.5 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2 transition whitespace-nowrap cursor-pointer">
+          <i data-lucide="sparkles" class="w-4 h-4 text-amber-600"></i>
+          <span>Add-ons & Services (<span id="admin-addons-tab-count">0</span>)</span>
+        </button>
+        <button id="admin-tab-btn-settings" onclick="switchAdminTab('settings')" class="px-4 py-2.5 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2 transition whitespace-nowrap cursor-pointer">
+          <i data-lucide="layout-template" class="w-4 h-4 text-amber-600"></i>
+          <span>Booth Display</span>
+        </button>
+        <button id="admin-tab-btn-branding" onclick="switchAdminTab('branding')" class="px-4 py-2.5 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2 transition whitespace-nowrap cursor-pointer">
+          <i data-lucide="palette" class="w-4 h-4 text-amber-600"></i>
+          <span>Brand & Logo</span>
+        </button>
+        <button id="admin-tab-btn-text" onclick="switchAdminTab('text')" class="px-4 py-2.5 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2 transition whitespace-nowrap cursor-pointer">
+          <i data-lucide="type" class="w-4 h-4 text-amber-600"></i>
+          <span>Page Headings & Text</span>
+        </button>
+      </div>
+        <button id="admin-tabs-right" type="button" onclick="scrollAdminTabs(1)" aria-label="Scroll tabs right" style="display:none" class="absolute right-0 top-0 bottom-0 z-10 w-9 items-center justify-end pr-1.5 bg-gradient-to-l from-stone-50 via-stone-50/90 to-transparent text-stone-600 hover:text-stone-900 cursor-pointer"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+
+      <!-- Modal Body (Scrollable) -->
+      <div class="p-4 sm:p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1 min-h-0" style="scrollbar-gutter: stable;">
+
+        <!-- Global Settings Strip: Base Booth Rental Fee -->
+        <div class="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <label class="text-xs font-bold text-stone-800 uppercase tracking-wide flex items-center gap-1.5">
+              <i data-lucide="tag" class="w-3.5 h-3.5 text-amber-700"></i>
+              <span>Base Arch Wall Rental Fee</span>
+            </label>
+            <p class="text-xs text-stone-500 mt-0.5">Fixed 24hr display setup fee before candies and services are added</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-bold text-stone-700">$</span>
+            <input type="number" id="admin-base-fee" min="0" step="5" class="w-28 px-3 py-1.5 text-sm font-bold rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white" onchange="updateBaseFee(this.value)">
+            <span class="text-xs text-stone-500">SGD/USD</span>
+          </div>
+        </div>
+
+        <!-- ================= PANEL 1: CANDIES CATALOG ================= -->
+        <div id="admin-candies-panel" class="space-y-6">
+          <!-- Manage Categories -->
+          <div class="border border-stone-200 rounded-2xl p-4 bg-stone-50/60 space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-1">
+              <h4 class="text-sm font-bold text-stone-900">Manage Categories</h4>
+              <span class="text-[11px] text-stone-400">Shown as filter tabs for your customers</span>
+            </div>
+            <div id="admin-category-list" class="flex flex-wrap gap-2"></div>
+            <div class="flex gap-2">
+              <input type="text" id="new-category-name" maxlength="30" placeholder="New category, e.g. Sugar-Free" onkeydown="if(event.key==='Enter')addCategory()" class="flex-1 min-w-0 text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white">
+              <button onclick="addCategory()" class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow-sm transition whitespace-nowrap cursor-pointer">Add Category</button>
+            </div>
+          </div>
+
+          <!-- Add New Candy Form -->
+          <div class="border border-stone-200 rounded-2xl p-4 bg-stone-50/60 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+                <span>Add New Candy to Catalog</span>
+              </h4>
+              <span class="text-[11px] text-stone-400">Accepts PNG, JPG, SVG, WebP</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div class="sm:col-span-4">
+                <label class="text-[11px] font-semibold text-stone-600 block mb-1">Candy Name *</label>
+                <input type="text" id="new-candy-name" placeholder="e.g. Belgian Truffles" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white">
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="text-[11px] font-semibold text-stone-600 block mb-1">Price ($) *</label>
+                <input type="number" id="new-candy-price" placeholder="35" min="1" step="1" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white">
+              </div>
+
+              <div class="sm:col-span-3">
+                <label class="text-[11px] font-semibold text-stone-600 block mb-1">Category</label>
+                <select id="new-candy-category" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white">
+                  <option value="gummy">Gummies & Sour</option>
+                  <option value="chocolate">Chocolates</option>
+                  <option value="gourmet">Artisan</option>
+                </select>
+              </div>
+
+              <div class="sm:col-span-3">
+                <label class="text-[11px] font-semibold text-stone-600 block mb-1">Upload Photo / Icon</label>
+                <input type="file" id="new-candy-file" accept="image/*" class="w-full text-[11px] file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-stone-800 file:text-white hover:file:bg-stone-700 text-stone-500 cursor-pointer">
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+              <button onclick="handleAddNewCandy()" class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Save & Add Candy</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Inventory List -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <span>Current Catalog Items</span>
+                <span id="admin-candy-count" class="text-xs px-2 py-0.5 rounded-full bg-stone-200 text-stone-700 font-semibold">0</span>
+              </h4>
+              <button onclick="resetInventoryToDefault()" class="text-xs text-stone-500 hover:text-red-600 transition flex items-center gap-1 cursor-pointer">
+                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                <span>Reset Candies</span>
+              </button>
+            </div>
+
+            <div class="space-y-2.5" id="admin-candy-list">
+              <!-- Dynamically populated by renderAdminCatalog() -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= PANEL 2: ADD-ONS & SERVICES ================= -->
+        <div id="admin-addons-panel" class="space-y-6 hidden">
+          <!-- Add New Add-on Service Form -->
+          <div class="border border-stone-200 rounded-2xl p-4 bg-stone-50/60 space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-amber-600"></i>
+                <span>Create New Add-On or Service</span>
+              </h4>
+              <span class="text-[11px] text-stone-400">Available to customers in real-time</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+              <div class="sm:col-span-5">
+                <label class="text-[11px] font-semibold text-stone-600 block mb-1">Service / Item Title *</label>
+                <input type="text" id="new-addon-name" placeholder="e.g. Personalized Wooden Name Plaque" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white">
+              </div>
+
+              <div class="sm:col-span-2">
+                <label class="text-[11px] font-semibold text-stone-600 block mb-1">Price ($) *</label>
+                <input type="number" id="new-addon-price" placeholder="45" min="0" step="1" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white">
+              </div>
+
+              <div class="sm:col-span-5">
+                <label class="text-[11px] font-semibold text-stone-600 block mb-1">Description / Notes</label>
+                <input type="text" id="new-addon-desc" placeholder="e.g. Laser-engraved plaque with event initials" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white">
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+              <button onclick="handleAddNewAddon()" class="px-4 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Save & Add Service</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Addons List -->
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <span>Configured Add-ons & Services</span>
+                <span id="admin-addons-count" class="text-xs px-2 py-0.5 rounded-full bg-stone-200 text-stone-700 font-semibold">0</span>
+              </h4>
+              <button onclick="resetAddonsToDefault()" class="text-xs text-stone-500 hover:text-red-600 transition flex items-center gap-1 cursor-pointer">
+                <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                <span>Reset Services</span>
+              </button>
+            </div>
+
+            <div class="space-y-2.5" id="admin-addons-list">
+              <!-- Dynamically populated by renderAdminAddons() -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= PANEL 3: BOOTH DISPLAY SETTINGS ================= -->
+        <div id="admin-settings-panel" class="space-y-6 hidden">
+          <div class="border border-stone-200 rounded-2xl p-5 bg-stone-50/60 space-y-4">
+            <div>
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="layout-template" class="w-4 h-4 text-amber-600"></i>
+                <span>Booth Footer Kickplate Text</span>
+              </h4>
+              <p class="text-xs text-stone-500 mt-1">Customize or clear the text displayed along the bottom edge of the arched board.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Bottom Left Text</label>
+                <input type="text" id="admin-footer-left" placeholder="e.g. Modular Acrylic Display" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateFooterText('left', this.value)">
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Bottom Right Text</label>
+                <input type="text" id="admin-footer-right" placeholder="e.g. 24-Hour Rental" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateFooterText('right', this.value)">
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-1">
+              <button onclick="clearBoothFooterTexts()" class="text-xs font-semibold text-stone-600 hover:text-red-600 px-3 py-1.5 rounded-lg border border-stone-300 hover:bg-red-50 transition cursor-pointer">
+                Clear Both Texts (Make Blank)
+              </button>
+            </div>
+          </div>
+
+          <!-- Owner PIN Settings & Data Sync -->
+          <div class="border border-stone-200 rounded-2xl p-5 bg-stone-50/60 space-y-4">
+            <div>
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="lock" class="w-4 h-4 text-amber-600"></i>
+                <span>Security PIN & Backup</span>
+              </h4>
+              <p class="text-xs text-stone-500 mt-1">Change your 4-digit admin PIN or export your candy catalog as a backup file.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Admin Security PIN</label>
+                <div class="flex gap-2">
+                  <input type="password" id="admin-pin-input" placeholder="1234" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white font-mono">
+                  <button onclick="updateAdminPin()" class="px-3 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl transition cursor-pointer">
+                    Save PIN
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Backup / Transfer Data</label>
+                <div class="flex items-center gap-2">
+                  <button onclick="exportConfigJson()" class="flex-1 px-3 py-2 bg-white border border-stone-300 hover:bg-stone-100 text-stone-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    <span>Export Data</span>
+                  </button>
+                  <label class="flex-1 px-3 py-2 bg-white border border-stone-300 hover:bg-stone-100 text-stone-800 text-xs font-semibold rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                    <span>Import Data</span>
+                    <input type="file" accept=".json" class="hidden" onchange="importConfigJson(this)">
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= PANEL 4: BRAND & LOGO SETTINGS ================= -->
+        <div id="admin-branding-panel" class="space-y-6 hidden">
+          <div class="border border-stone-200 rounded-2xl p-5 bg-stone-50/60 space-y-4">
+            <div>
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="store" class="w-4 h-4 text-amber-600"></i>
+                <span>Business Name & Tagline</span>
+              </h4>
+              <p class="text-xs text-stone-500 mt-1">Customize the company name and subtitle appearing in the top navigation bar and booking proposals.</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Company / Business Name</label>
+                <input type="text" id="admin-brand-name" placeholder="e.g. Sweet Treats Co." class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateBrandName(this.value)">
+              </div>
+
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Subtitle / Tagline</label>
+                <input type="text" id="admin-brand-tagline" placeholder="e.g. Bespoke Event Rental & Candy Walls" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateBrandTagline(this.value)">
+              </div>
+            </div>
+          </div>
+
+          <!-- Logo Image & Icon Setup -->
+          <div class="border border-stone-200 rounded-2xl p-5 bg-stone-50/60 space-y-4">
+            <div>
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="image" class="w-4 h-4 text-amber-600"></i>
+                <span>Brand Logo or Icon</span>
+              </h4>
+              <p class="text-xs text-stone-500 mt-1">Upload your official brand logo image (PNG, JPG, SVG, WebP) or select a fallback icon.</p>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-start sm:items-center gap-5 pt-1">
+              <!-- Live Preview of Logo -->
+              <div class="flex items-center gap-3">
+                <div id="admin-logo-preview" class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 to-amber-400 flex items-center justify-center text-white shadow-sm overflow-hidden shrink-0 border border-stone-200">
+                  <i id="admin-logo-preview-icon" data-lucide="candy" class="w-7 h-7"></i>
+                  <img id="admin-logo-preview-img" src="" alt="Preview Logo" class="w-full h-full object-cover hidden">
+                </div>
+                <div class="text-xs">
+                  <div class="font-bold text-stone-800">Current Logo Preview</div>
+                  <div class="text-stone-400 text-[11px]">Displays at top-left of page</div>
+                </div>
+              </div>
+
+              <!-- Upload Actions -->
+              <div class="flex flex-wrap items-center gap-2 flex-1">
+                <label class="px-3.5 py-2 text-xs font-semibold bg-stone-900 hover:bg-stone-800 text-white rounded-xl shadow-xs transition flex items-center gap-1.5 cursor-pointer">
+                  <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                  <span>Upload Logo Image</span>
+                  <input type="file" id="admin-logo-upload" accept="image/*" class="hidden" onchange="handleBrandLogoUpload(this)">
+                </label>
+
+                <button onclick="removeBrandLogoImage()" class="px-3.5 py-2 text-xs font-semibold bg-white border border-stone-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 text-stone-700 rounded-xl transition flex items-center gap-1.5 cursor-pointer">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Use Icon Instead</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Pre-made Icon Selector (if no photo uploaded) -->
+            <div class="pt-2 border-t border-stone-200">
+              <label class="text-[11px] font-semibold text-stone-700 block mb-2">Preset Brand Icon (used when no image is uploaded)</label>
+              <div class="flex flex-wrap gap-2 text-xs" id="brand-icon-presets">
+                <button type="button" onclick="selectBrandIcon('candy')" class="px-3 py-1.5 rounded-xl border border-stone-300 hover:border-amber-500 bg-white flex items-center gap-1.5 transition cursor-pointer">
+                  <i data-lucide="candy" class="w-3.5 h-3.5 text-amber-700"></i>
+                  <span>Candy</span>
+                </button>
+                <button type="button" onclick="selectBrandIcon('sparkles')" class="px-3 py-1.5 rounded-xl border border-stone-300 hover:border-amber-500 bg-white flex items-center gap-1.5 transition cursor-pointer">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-700"></i>
+                  <span>Sparkles</span>
+                </button>
+                <button type="button" onclick="selectBrandIcon('party-popper')" class="px-3 py-1.5 rounded-xl border border-stone-300 hover:border-amber-500 bg-white flex items-center gap-1.5 transition cursor-pointer">
+                  <i data-lucide="party-popper" class="w-3.5 h-3.5 text-amber-700"></i>
+                  <span>Party</span>
+                </button>
+                <button type="button" onclick="selectBrandIcon('gift')" class="px-3 py-1.5 rounded-xl border border-stone-300 hover:border-amber-500 bg-white flex items-center gap-1.5 transition cursor-pointer">
+                  <i data-lucide="gift" class="w-3.5 h-3.5 text-amber-700"></i>
+                  <span>Gift</span>
+                </button>
+                <button type="button" onclick="selectBrandIcon('heart')" class="px-3 py-1.5 rounded-xl border border-stone-300 hover:border-amber-500 bg-white flex items-center gap-1.5 transition cursor-pointer">
+                  <i data-lucide="heart" class="w-3.5 h-3.5 text-amber-700"></i>
+                  <span>Heart</span>
+                </button>
+                <button type="button" onclick="selectBrandIcon('crown')" class="px-3 py-1.5 rounded-xl border border-stone-300 hover:border-amber-500 bg-white flex items-center gap-1.5 transition cursor-pointer">
+                  <i data-lucide="crown" class="w-3.5 h-3.5 text-amber-700"></i>
+                  <span>Crown</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= PANEL 5: PAGE HEADINGS & TEXT SETTINGS ================= -->
+        <div id="admin-text-panel" class="space-y-6 hidden">
+          <!-- Candy Menu Headings -->
+          <div class="border border-stone-200 rounded-2xl p-5 bg-stone-50/60 space-y-4">
+            <div>
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="candy" class="w-4 h-4 text-amber-600"></i>
+                <span>Candy Menu Box Text</span>
+              </h4>
+              <p class="text-xs text-stone-500 mt-1">Customize the title and instructions shown above your candy selection grid.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Menu Title</label>
+                <input type="text" id="admin-menu-title" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateMenuTitle(this.value)">
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Menu Subtitle / Help Text</label>
+                <input type="text" id="admin-menu-subtitle" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateMenuSubtitle(this.value)">
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Estimate Box Headings -->
+          <div class="border border-stone-200 rounded-2xl p-5 bg-stone-50/60 space-y-4">
+            <div>
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="receipt" class="w-4 h-4 text-amber-600"></i>
+                <span>Rental Estimate Box Text</span>
+              </h4>
+              <p class="text-xs text-stone-500 mt-1">Customize the dark summary card title and description.</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Estimate Title</label>
+                <input type="text" id="admin-estimate-title" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateEstimateTitle(this.value)">
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Estimate Subtitle / Note</label>
+                <input type="text" id="admin-estimate-subtitle" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateEstimateSubtitle(this.value)">
+              </div>
+            </div>
+          </div>
+
+          <!-- Proposal Modal Headings -->
+          <div class="border border-stone-200 rounded-2xl p-5 bg-stone-50/60 space-y-4">
+            <div>
+              <h4 class="text-sm font-bold text-stone-900 flex items-center gap-2">
+                <i data-lucide="file-text" class="w-4 h-4 text-amber-600"></i>
+                <span>Specification Proposal Modal Text</span>
+              </h4>
+              <p class="text-xs text-stone-500 mt-1">Customize the pop-up modal title and quote prefix shown when customers click "Reserve Setup".</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Proposal Modal Title</label>
+                <input type="text" id="admin-proposal-title" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateProposalTitle(this.value)">
+              </div>
+              <div>
+                <label class="text-[11px] font-semibold text-stone-700 block mb-1">Quote Reference Prefix</label>
+                <input type="text" id="admin-quote-prefix" class="w-full text-xs px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 bg-white" oninput="updateQuotePrefix(this.value)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3.5 border-t border-stone-200 bg-stone-50/80 flex items-center justify-between">
+        <span class="text-xs text-stone-500 flex items-center gap-1.5">
+          <i data-lucide="database" class="w-3.5 h-3.5 text-emerald-600"></i>
+          <span>Auto-saved to your browser's local memory</span>
+        </span>
+        <button onclick="closeInventoryModal()" class="px-5 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow-sm transition cursor-pointer">
+          Done
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOOKING SPECIFICATION & PROPOSAL MODAL -->
+  <div id="booking-modal" class="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[92vh] shadow-2xl border border-stone-200 flex flex-col overflow-hidden">
+      <div class="px-4 sm:px-6 py-4 border-b border-stone-200 flex items-center justify-between gap-3 bg-stone-50">
+        <div class="min-w-0">
+          <h3 id="proposal-title-display" class="font-serif font-bold text-xl text-stone-900">Rental Specification Proposal</h3>
+          <p class="text-xs text-stone-500"><span id="proposal-quote-prefix-display">Order Quote Reference: #AW-</span><span id="quote-number">0000</span></p>
+        </div>
+        <button onclick="closeBookingModal()" class="text-stone-400 hover:text-stone-700 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto space-y-4 text-xs">
+        <div class="bg-stone-50 rounded-2xl p-4 border border-stone-200 space-y-2">
+          <div class="flex justify-between font-bold text-stone-900 border-b border-stone-200 pb-2">
+            <span>Item / Service Description</span>
+            <span>Price</span>
+          </div>
+          <div class="flex justify-between text-stone-700">
+            <span>Base Arch Wall Setup (Tall Arch, 9 Bins)</span>
+            <span id="modal-base-display">$150.00</span>
+          </div>
+          <div class="space-y-1 pt-1" id="modal-candy-list">
+            <!-- Dynamically populated -->
+          </div>
+          <div class="space-y-1 pt-1 border-t border-stone-200" id="modal-addons-list">
+            <!-- Dynamically populated -->
+          </div>
+          <div class="pt-2 border-t border-stone-300 flex justify-between font-bold text-stone-900 text-sm">
+            <span>Total Estimated Investment:</span>
+            <span id="modal-total" class="text-amber-800">$150.00</span>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          <h4 class="font-bold text-stone-900">Client & Event Information</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input type="text" id="client-name" placeholder="Full Name *" class="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500">
+            <input type="email" id="client-email" placeholder="Email Address *" class="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500">
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <input type="tel" id="client-phone" inputmode="tel" autocomplete="tel" placeholder="Phone Number *" class="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500">
+            <div class="relative min-w-0">
+              <input type="date" id="event-date" required class="is-empty w-full min-w-0 px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 text-stone-600 bg-white text-left">
+              <span id="event-date-placeholder" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 truncate max-w-[calc(100%-2.75rem)]">Event Date * (e.g. 20 Dec 2026)</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="modal-alert-box" class="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] hidden">
+          <div class="font-bold">Reservation Request Recorded!</div>
+          <p id="modal-alert-msg" class="mt-0.5"></p>
+        </div>
+      </div>
+
+      <div class="px-4 sm:px-6 py-3 sm:py-4 border-t border-stone-200 bg-stone-50 flex flex-wrap items-center justify-between gap-2">
+        <button onclick="copyQuoteToClipboard()" class="text-stone-600 hover:text-stone-900 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+          <span>Copy Summary</span>
+        </button>
+        <div class="flex items-center gap-2">
+          <button onclick="closeBookingModal()" class="px-4 py-2 border border-stone-300 text-stone-700 text-xs font-semibold rounded-xl hover:bg-stone-100 transition cursor-pointer">
+            Close
+          </button>
+          <button onclick="submitReservation()" class="px-5 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer">
+            Confirm & Send Request
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN PIN AUTHENTICATION MODAL -->
+  <div id="pin-modal" class="fixed inset-0 bg-stone-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-stone-200 text-center space-y-4">
+      <div class="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center mx-auto shadow-xs">
+        <i data-lucide="lock" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h3 class="font-serif font-bold text-lg text-stone-900">Owner Authorization</h3>
+        <p class="text-xs text-stone-500 mt-1">Enter PIN to manage rates, inventory, branding, and booth settings.</p>
+        <div class="text-[11px] font-semibold text-amber-800 mt-1 bg-amber-50 rounded-lg py-1 px-2 inline-block">Default PIN: 1234</div>
+      </div>
+
+      <div class="space-y-2">
+        <input type="password" id="enter-pin-input" maxlength="12" placeholder="Enter PIN" class="w-full text-center text-sm tracking-widest px-3 py-2.5 rounded-xl border border-stone-300 focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono" onkeydown="if(event.key === 'Enter') verifyAdminPin()">
+        <p id="pin-error-msg" class="text-[11px] text-red-600 font-medium hidden">Incorrect PIN. Please try again.</p>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 pt-2">
+        <button onclick="closePinModal()" class="w-1/2 py-2 border border-stone-300 hover:bg-stone-100 text-stone-700 text-xs font-semibold rounded-xl transition cursor-pointer">
+          Cancel
+        </button>
+        <button onclick="verifyAdminPin()" class="w-1/2 py-2 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded-xl shadow transition cursor-pointer">
+          Unlock
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MOBILE STICKY TOTAL BAR -->
+  <div class="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 backdrop-blur-md border-t border-stone-200 px-4 pt-3" style="padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));">
+    <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+      <div>
+        <div class="text-[10px] uppercase tracking-wider text-stone-500 font-semibold leading-none">Estimated Total</div>
+        <div id="mobile-total" class="text-lg font-serif font-bold text-stone-900 leading-tight">$150.00</div>
+      </div>
+      <button onclick="openBookingModal()" class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold text-xs rounded-xl shadow-lg active:scale-95 transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer">
+        <span>Reserve Setup</span>
+        <svg class="w-4 h-4 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed bottom-24 lg:bottom-5 inset-x-4 lg:inset-x-auto lg:right-5 z-[60] flex flex-col items-center lg:items-end pointer-events-none"></div>
+
+  <!-- Clean footer with copyright (no visible locks or admin hints) -->
+  <footer class="py-4 text-center text-[11px] text-stone-400">
+    <span>&copy; <span id="footer-brand-name">Sweet Treats Co.</span> &bull; All Rights Reserved</span>
+  </footer>
+
+  <!-- ================= LOGIC & STATE SCRIPT ================= -->
+  <script>
+    /* =========================================================================
+       DEFAULT DATA STRUCTURES & FALLBACKS
+       ========================================================================= */
+    /* ===== EMAIL SETTINGS: paste your free Web3Forms access key here (web3forms.com) ===== */
+    const WEB3FORMS_ACCESS_KEY = 'PASTE_YOUR_ACCESS_KEY_HERE';
+
+    const DEFAULT_BASE_RENTAL_PRICE = 150.00;
+    const DEFAULT_ADMIN_PIN = '1234';
+    const DEFAULT_BRAND_NAME = 'Sweet Treats Co.';
+    const DEFAULT_BRAND_TAGLINE = 'Interactive Candy Wall & Rental Builder';
+    const DEFAULT_BRAND_ICON = 'candy';
+
+    const DEFAULT_MENU_TITLE = 'Candy Confection Menu';
+    const DEFAULT_MENU_SUBTITLE = 'Click to fill targeted bin or drag directly onto the wall';
+    const DEFAULT_ESTIMATE_TITLE = 'Live Rental Estimate';
+    const DEFAULT_ESTIMATE_SUBTITLE = 'Includes 24hr display setup, acrylic bins, & selections';
+    const DEFAULT_PROPOSAL_TITLE = 'Rental Specification Proposal';
+    const DEFAULT_QUOTE_PREFIX = 'Order Quote Reference: #AW-';
+
+    const DEFAULT_ADDONS_LIST = [
+      {
+        id: 'led',
+        name: 'LED Halo Arch Backlighting',
+        price: 35.00,
+        description: 'Warm ambient LED ring behind arch for evening glow & photo enhancement',
+        enabled: true,
+        isCustom: false
+      },
+      {
+        id: 'bags',
+        name: '50 Glassine Favor Bags + Gold Scoops',
+        price: 25.00,
+        description: 'Includes 9 gold scoops and embossed favor bags for your guests',
+        enabled: true,
+        isCustom: false
+      },
+      {
+        id: 'attendant',
+        name: 'Uniformed Confection Attendant (3 Hrs)',
+        price: 120.00,
+        description: 'Handles continuous bin refills, sanitization, guest packaging service',
+        enabled: true,
+        isCustom: false
+      }
+    ];
+
+    const DEFAULT_CANDY_CATALOG = [
+      {
+        id: 'sour-belts',
+        name: 'Rainbow Sour Belts',
+        category: 'gummy',
+        price: 35.00,
+        badge: 'Top Pick',
+        description: 'Multi-flavor fruity sugar-dusted ribbon twists',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><path d="M6 34 Q 16 12 26 24 T 42 16" fill="none" stroke="#FF6B6B" stroke-width="6" stroke-linecap="round"/><path d="M6 36 Q 16 14 26 26 T 42 18" fill="none" stroke="#FFA94D" stroke-width="4" stroke-linecap="round"/><path d="M6 38 Q 16 16 26 28 T 42 20" fill="none" stroke="#74C0FC" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="#FFF"/><circle cx="32" cy="22" r="1.5" fill="#FFF"/></svg>`
+      },
+      {
+        id: 'truffles',
+        name: 'Artisan Chocolate Truffles',
+        category: 'chocolate',
+        price: 48.00,
+        badge: 'Gourmet',
+        description: 'Belgian dark and milk cocoa dusted ganache',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><circle cx="24" cy="24" r="15" fill="#4A2E18"/><circle cx="21" cy="20" r="11" fill="#6B4423"/><path d="M16 18 Q 24 24 32 16" fill="none" stroke="#D4AF37" stroke-width="2" stroke-linecap="round"/><circle cx="28" cy="27" r="1.5" fill="#D4AF37"/><circle cx="20" cy="26" r="1.5" fill="#D4AF37"/></svg>`
+      },
+      {
+        id: 'gummy-bears',
+        name: 'Pastel Gummy Bears',
+        category: 'gummy',
+        price: 28.00,
+        badge: 'Kid Favorite',
+        description: 'Soft peach, strawberry, and champagne bears',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><path d="M24 16 C20 16 18 19 18 23 C18 26 20 28 20 34 C20 37 22 39 24 39 C26 39 28 37 28 34 C28 28 30 26 30 23 C30 19 28 16 24 16 Z" fill="#F472B6"/><circle cx="18" cy="16" r="3.5" fill="#F472B6"/><circle cx="30" cy="16" r="3.5" fill="#F472B6"/><ellipse cx="22" cy="21" rx="1" ry="1.5" fill="#831843"/><ellipse cx="26" cy="21" rx="1" ry="1.5" fill="#831843"/></svg>`
+      },
+      {
+        id: 'swirl-lollipops',
+        name: 'Swirl Gourmet Lollipops',
+        category: 'gourmet',
+        price: 38.00,
+        badge: 'Vibrant',
+        description: 'Old-fashioned hand-pulled party carnival swirls',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><rect x="22" y="24" width="4" height="20" rx="2" fill="#E2E8F0"/><circle cx="24" cy="18" r="14" fill="#FFE4E6"/><path d="M24 18 m -10 0 a 10 10 0 1 0 20 0 a 10 10 0 1 0 -20 0" fill="none" stroke="#F43F5E" stroke-width="3" stroke-linecap="round"/><path d="M24 18 m -5 0 a 5 5 0 1 0 10 0 a 5 5 0 1 0 -10 0" fill="none" stroke="#FB7185" stroke-width="2.5"/></svg>`
+      },
+      {
+        id: 'foil-caramels',
+        name: 'Gold Wrapped Caramels',
+        category: 'chocolate',
+        price: 32.00,
+        badge: 'Luxury',
+        description: 'Sea salt butter caramels in shimmering gold foil',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><rect x="15" y="16" width="18" height="16" rx="4" fill="#D97706"/><path d="M15 20 L7 14 L11 28 Z" fill="#F59E0B"/><path d="M33 20 L41 14 L37 28 Z" fill="#F59E0B"/><rect x="18" y="19" width="12" height="10" rx="2" fill="#FBBF24"/><line x1="20" y1="24" x2="28" y2="24" stroke="#78350F" stroke-width="1.5" stroke-linecap="round"/></svg>`
+      },
+      {
+        id: 'jelly-beans',
+        name: 'Boutique Jelly Bean Mix',
+        category: 'gummy',
+        price: 26.00,
+        badge: 'Classic',
+        description: '24 natural fruit juice gourmet jelly bean drops',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><path d="M14 22 C11 26 15 32 20 30 C24 28 23 23 18 21 C15 20 14 21 14 22 Z" fill="#A855F7"/><path d="M26 18 C23 22 27 28 32 26 C36 24 35 19 30 17 C27 16 26 17 26 18 Z" fill="#EC4899"/><path d="M20 34 C17 38 22 42 27 40 C30 38 29 33 24 32 C22 31 21 32 20 34 Z" fill="#10B981"/></svg>`
+      },
+      {
+        id: 'cola-bottles',
+        name: 'Fizzy Cola Bottles',
+        category: 'gummy',
+        price: 30.00,
+        badge: 'Tangy',
+        description: 'Sour effervescent retro soda bottle gummies',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><path d="M22 10 L26 10 L27 15 L29 18 L29 36 L19 36 L19 18 L21 15 Z" fill="#B45309"/><path d="M19 24 L29 24 L29 36 L19 36 Z" fill="#78350F"/><circle cx="23" cy="28" r="1" fill="#FFF" opacity="0.6"/><circle cx="25" cy="32" r="1.5" fill="#FFF" opacity="0.6"/><circle cx="23" cy="14" r="1" fill="#FFF" opacity="0.5"/></svg>`
+      },
+      {
+        id: 'french-macarons',
+        name: 'Parisian French Macarons',
+        category: 'gourmet',
+        price: 55.00,
+        badge: 'Premium',
+        description: 'Almond meringue shells with pistachio & vanilla bean',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><ellipse cx="24" cy="18" rx="14" ry="6" fill="#F472B6"/><rect x="10" y="22" width="28" height="4" rx="2" fill="#FFF" opacity="0.9"/><ellipse cx="24" cy="28" rx="14" ry="6" fill="#F472B6"/><path d="M10 20 Q 24 22 38 20" stroke="#DB2777" stroke-width="1" fill="none"/></svg>`
+      },
+      {
+        id: 'rock-candy',
+        name: 'Retro Rock Candy Sticks',
+        category: 'gourmet',
+        price: 40.00,
+        badge: 'Sparkle',
+        description: 'Sparkling pure crystalline sugar swizzle sticks',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><line x1="16" y1="36" x2="34" y2="12" stroke="#D1D5DB" stroke-width="2.5" stroke-linecap="round"/><circle cx="28" cy="20" r="7" fill="#38BDF8"/><circle cx="25" cy="24" r="5" fill="#7DD3FC"/><circle cx="31" cy="16" r="4" fill="#BAE6FD"/><circle cx="22" cy="28" r="3" fill="#E0F2FE"/></svg>`
+      },
+      {
+        id: 'cotton-candy',
+        name: 'Cotton Candy Puffs',
+        category: 'gourmet',
+        price: 34.00,
+        badge: 'Airy',
+        description: 'Fluffy organic spun sugar clouds in sealed tubs',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><rect x="23" y="28" width="2" height="14" fill="#D1D5DB"/><circle cx="24" cy="18" r="10" fill="#F0ABFC" opacity="0.85"/><circle cx="18" cy="22" r="7" fill="#E879F9" opacity="0.9"/><circle cx="30" cy="21" r="7" fill="#F472B6" opacity="0.85"/></svg>`
+      }
+    ];
+
+    /* Reactive State */
+    let baseRentalPrice = DEFAULT_BASE_RENTAL_PRICE;
+    let candyCatalog = [];
+    let customAddons = [];
+    let selectedAddonIds = new Set();
+    let bins = Array(9).fill(null);
+    let activeSlotIndex = 0;
+    let currentCategoryFilter = 'all';
+    const DEFAULT_CATEGORIES = [
+      { id: 'gummy', name: 'Gummies & Sour' },
+      { id: 'chocolate', name: 'Chocolates' },
+      { id: 'gourmet', name: 'Artisan' }
+    ];
+    let categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+    let boothFooterLeft = 'Modular Acrylic Display';
+    let boothFooterRight = '24-Hour Rental';
+    let adminPin = DEFAULT_ADMIN_PIN;
+    let isAdminUnlocked = false;
+    let brandName = DEFAULT_BRAND_NAME;
+    let brandTagline = DEFAULT_BRAND_TAGLINE;
+    let brandLogoImage = null;
+    let brandIcon = DEFAULT_BRAND_ICON;
+
+    let textMenuTitle = DEFAULT_MENU_TITLE;
+    let textMenuSubtitle = DEFAULT_MENU_SUBTITLE;
+    let textEstimateTitle = DEFAULT_ESTIMATE_TITLE;
+    let textEstimateSubtitle = DEFAULT_ESTIMATE_SUBTITLE;
+    let textProposalTitle = DEFAULT_PROPOSAL_TITLE;
+    let textQuotePrefix = DEFAULT_QUOTE_PREFIX;
+
+    function loadSavedData() {
+      try {
+        const savedPin = localStorage.getItem('atelier_admin_pin');
+        if (savedPin) adminPin = savedPin;
+
+        const savedBrandName = localStorage.getItem('atelier_brand_name');
+        if (savedBrandName) brandName = savedBrandName;
+
+        const savedBrandTagline = localStorage.getItem('atelier_brand_tagline');
+        if (savedBrandTagline) brandTagline = savedBrandTagline;
+
+        const savedBrandLogo = localStorage.getItem('atelier_brand_logo_image');
+        if (savedBrandLogo) brandLogoImage = savedBrandLogo;
+
+        const savedBrandIcon = localStorage.getItem('atelier_brand_icon');
+        if (savedBrandIcon) brandIcon = savedBrandIcon;
+
+        const savedMenuTitle = localStorage.getItem('atelier_text_menu_title');
+        if (savedMenuTitle !== null) textMenuTitle = savedMenuTitle;
+
+        const savedMenuSubtitle = localStorage.getItem('atelier_text_menu_subtitle');
+        if (savedMenuSubtitle !== null) textMenuSubtitle = savedMenuSubtitle;
+
+        const savedEstTitle = localStorage.getItem('atelier_text_estimate_title');
+        if (savedEstTitle !== null) textEstimateTitle = savedEstTitle;
+
+        const savedEstSubtitle = localStorage.getItem('atelier_text_estimate_subtitle');
+        if (savedEstSubtitle !== null) textEstimateSubtitle = savedEstSubtitle;
+
+        const savedPropTitle = localStorage.getItem('atelier_text_proposal_title');
+        if (savedPropTitle !== null) textProposalTitle = savedPropTitle;
+
+        const savedQuotePref = localStorage.getItem('atelier_text_quote_prefix');
+        if (savedQuotePref !== null) textQuotePrefix = savedQuotePref;
+
+        const savedCatalog = localStorage.getItem('atelier_candy_catalog');
+        if (savedCatalog) {
+          candyCatalog = JSON.parse(savedCatalog);
+        } else {
+          candyCatalog = JSON.parse(JSON.stringify(DEFAULT_CANDY_CATALOG));
+        }
+
+        const savedCats = localStorage.getItem('atelier_categories');
+        if (savedCats) {
+          const parsedCats = JSON.parse(savedCats);
+          if (Array.isArray(parsedCats)) categories = parsedCats;
+        }
+        ensureCategoriesForCandies();
+
+        const savedAddons = localStorage.getItem('atelier_addons_list');
+        if (savedAddons) {
+          customAddons = JSON.parse(savedAddons);
+        } else {
+          customAddons = JSON.parse(JSON.stringify(DEFAULT_ADDONS_LIST));
+        }
+
+        const savedBasePrice = localStorage.getItem('atelier_base_rental_price');
+        if (savedBasePrice) {
+          baseRentalPrice = parseFloat(savedBasePrice) || DEFAULT_BASE_RENTAL_PRICE;
+        }
+
+        const savedFooterLeft = localStorage.getItem('atelier_footer_left');
+        if (savedFooterLeft !== null) boothFooterLeft = savedFooterLeft;
+
+        const savedFooterRight = localStorage.getItem('atelier_footer_right');
+        if (savedFooterRight !== null) boothFooterRight = savedFooterRight;
+
+        const savedBins = localStorage.getItem('atelier_bins_selection');
+        if (savedBins) {
+          const parsed = JSON.parse(savedBins);
+          if (Array.isArray(parsed) && parsed.length === 9) {
+            bins = parsed.map(savedCandy => {
+              if (!savedCandy) return null;
+              const match = candyCatalog.find(c => c.id === savedCandy.id);
+              return match ? match : savedCandy;
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error loading localStorage data:', err);
+        candyCatalog = JSON.parse(JSON.stringify(DEFAULT_CANDY_CATALOG));
+        customAddons = JSON.parse(JSON.stringify(DEFAULT_ADDONS_LIST));
+        baseRentalPrice = DEFAULT_BASE_RENTAL_PRICE;
+      }
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem('atelier_candy_catalog', JSON.stringify(candyCatalog));
+        localStorage.setItem('atelier_categories', JSON.stringify(categories));
+        localStorage.setItem('atelier_addons_list', JSON.stringify(customAddons));
+        localStorage.setItem('atelier_base_rental_price', baseRentalPrice.toString());
+        localStorage.setItem('atelier_bins_selection', JSON.stringify(bins));
+        localStorage.setItem('atelier_footer_left', boothFooterLeft);
+        localStorage.setItem('atelier_footer_right', boothFooterRight);
+        localStorage.setItem('atelier_admin_pin', adminPin);
+        localStorage.setItem('atelier_brand_name', brandName);
+        localStorage.setItem('atelier_brand_tagline', brandTagline);
+        if (brandLogoImage) {
+          localStorage.setItem('atelier_brand_logo_image', brandLogoImage);
+        } else {
+          localStorage.removeItem('atelier_brand_logo_image');
+        }
+        localStorage.setItem('atelier_brand_icon', brandIcon);
+
+        localStorage.setItem('atelier_text_menu_title', textMenuTitle);
+        localStorage.setItem('atelier_text_menu_subtitle', textMenuSubtitle);
+        localStorage.setItem('atelier_text_estimate_title', textEstimateTitle);
+        localStorage.setItem('atelier_text_estimate_subtitle', textEstimateSubtitle);
+        localStorage.setItem('atelier_text_proposal_title', textProposalTitle);
+        localStorage.setItem('atelier_text_quote_prefix', textQuotePrefix);
+      } catch (err) {
+        console.warn('LocalStorage save error:', err);
+      }
+    }
+
+    /* Global Keyboard Shortcut for Admin Access */
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        promptAdminPin();
+      }
+    });
+
+    /* Check URL parameter (?admin=true, ?admin=1, or #admin) to open owner PIN prompt */
+    function checkAdminUrlTrigger() {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasAdminQuery = urlParams.get('admin') === 'true' || urlParams.get('admin') === '1';
+        const hasAdminHash = window.location.hash.toLowerCase() === '#admin';
+        if (hasAdminQuery || hasAdminHash) {
+          setTimeout(() => {
+            promptAdminPin();
+          }, 350);
+        }
+      } catch (e) {
+        console.warn('URL check error:', e);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSavedData();
+      renderBranding();
+      renderCustomTextElements();
+      renderBins();
+      renderCatalog();
+      renderCustomerAddons();
+      renderAdminCatalog();
+      renderAdminAddons();
+      renderBoothFooter();
+
+      const adminPinInput = document.getElementById('admin-pin-input');
+      if (adminPinInput) adminPinInput.value = adminPin;
+
+      const adminBaseFeeInput = document.getElementById('admin-base-fee');
+      if (adminBaseFeeInput) adminBaseFeeInput.value = baseRentalPrice;
+
+      const adminFooterLeftInput = document.getElementById('admin-footer-left');
+      if (adminFooterLeftInput) adminFooterLeftInput.value = boothFooterLeft;
+
+      const adminFooterRightInput = document.getElementById('admin-footer-right');
+      if (adminFooterRightInput) adminFooterRightInput.value = boothFooterRight;
+
+      const brandNameInput = document.getElementById('admin-brand-name');
+      if (brandNameInput) brandNameInput.value = brandName;
+
+      const brandTaglineInput = document.getElementById('admin-brand-tagline');
+      if (brandTaglineInput) brandTaglineInput.value = brandTagline;
+
+      const menuTitleInput = document.getElementById('admin-menu-title');
+      if (menuTitleInput) menuTitleInput.value = textMenuTitle;
+
+      const menuSubInput = document.getElementById('admin-menu-subtitle');
+      if (menuSubInput) menuSubInput.value = textMenuSubtitle;
+
+      const estTitleInput = document.getElementById('admin-estimate-title');
+      if (estTitleInput) estTitleInput.value = textEstimateTitle;
+
+      const estSubInput = document.getElementById('admin-estimate-subtitle');
+      if (estSubInput) estSubInput.value = textEstimateSubtitle;
+
+      const propTitleInput = document.getElementById('admin-proposal-title');
+      if (propTitleInput) propTitleInput.value = textProposalTitle;
+
+      const quotePrefInput = document.getElementById('admin-quote-prefix');
+      if (quotePrefInput) quotePrefInput.value = textQuotePrefix;
+
+      const baseDisplay = document.getElementById('base-rental-display');
+      if (baseDisplay) baseDisplay.innerText = `$${baseRentalPrice.toFixed(2)}`;
+
+      recalculate();
+      if (window.lucide) lucide.createIcons();
+
+      // Check if owner navigated using secret admin URL
+      checkAdminUrlTrigger();
+      initAdminShortcuts();
+      initModalScrollLock();
+      initDatePlaceholder();
+      renderCategoryUI();
+    });
+
+    // Freeze the page behind any open pop-up (booking, admin, PIN)
+    function initModalScrollLock() {
+      const ids = ['booking-modal', 'inventory-modal', 'pin-modal'];
+      let locked = false, savedY = 0;
+      const apply = () => {
+        const anyOpen = ids.some(id => {
+          const el = document.getElementById(id);
+          return el && !el.classList.contains('hidden');
+        });
+        const b = document.body;
+        if (anyOpen && !locked) {
+          savedY = window.scrollY;
+          b.style.position = 'fixed';
+          b.style.top = `-${savedY}px`;
+          b.style.left = '0';
+          b.style.right = '0';
+          b.style.width = '100%';
+          locked = true;
+        } else if (!anyOpen && locked) {
+          b.style.position = '';
+          b.style.top = '';
+          b.style.left = '';
+          b.style.right = '';
+          b.style.width = '';
+          window.scrollTo(0, savedY);
+          locked = false;
+        }
+      };
+      const obs = new MutationObserver(apply);
+      ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+      });
+      apply();
+    }
+
+    // Sample text in the date box while it is empty
+    function syncDatePlaceholder() {
+      const d = document.getElementById('event-date');
+      const p = document.getElementById('event-date-placeholder');
+      if (!d || !p) return;
+      const empty = !d.value;
+      d.classList.toggle('is-empty', empty);
+      p.style.display = empty ? 'block' : 'none';
+    }
+
+    function initDatePlaceholder() {
+      const d = document.getElementById('event-date');
+      if (!d) return;
+      ['input', 'change', 'blur'].forEach(ev => d.addEventListener(ev, syncDatePlaceholder));
+      d.addEventListener('focus', () => {
+        const p = document.getElementById('event-date-placeholder');
+        if (p) p.style.display = 'none';
+        d.classList.remove('is-empty');
+      });
+      syncDatePlaceholder();
+      const bm = document.getElementById('booking-modal');
+      if (bm) {
+        const clearBad = (e) => { if (e.target && e.target.classList) e.target.classList.remove('border-red-400', 'ring-1', 'ring-red-300'); };
+        bm.addEventListener('input', clearBad);
+        bm.addEventListener('change', clearBad);
+      }
+    }
+
+    // Phone-friendly admin access: tap the brand logo 5 times quickly, or add #admin to the address
+    function initAdminShortcuts() {
+      const logo = document.getElementById('brand-logo-container');
+      if (logo) {
+        let taps = 0, timer = null;
+        logo.addEventListener('click', () => {
+          taps++;
+          clearTimeout(timer);
+          timer = setTimeout(() => { taps = 0; }, 2000);
+          if (taps >= 5) { taps = 0; promptAdminPin(); }
+        });
+      }
+      window.addEventListener('hashchange', checkAdminUrlTrigger);
+    }
+
+    function renderCustomTextElements() {
+      const menuTitleEl = document.getElementById('menu-title-display');
+      const menuSubEl = document.getElementById('menu-subtitle-display');
+      const estTitleEl = document.getElementById('estimate-title-display');
+      const estSubEl = document.getElementById('estimate-subtitle-display');
+      const propTitleEl = document.getElementById('proposal-title-display');
+      const quotePrefEl = document.getElementById('proposal-quote-prefix-display');
+
+      if (menuTitleEl) menuTitleEl.innerText = textMenuTitle;
+      if (menuSubEl) menuSubEl.innerText = textMenuSubtitle;
+      if (estTitleEl) estTitleEl.innerText = textEstimateTitle;
+      if (estSubEl) estSubEl.innerText = textEstimateSubtitle;
+      if (propTitleEl) propTitleEl.innerText = textProposalTitle;
+      if (quotePrefEl) quotePrefEl.innerText = textQuotePrefix;
+    }
+
+    function updateMenuTitle(val) {
+      textMenuTitle = val;
+      renderCustomTextElements();
+      saveState();
+    }
+
+    function updateMenuSubtitle(val) {
+      textMenuSubtitle = val;
+      renderCustomTextElements();
+      saveState();
+    }
+
+    function updateEstimateTitle(val) {
+      textEstimateTitle = val;
+      renderCustomTextElements();
+      saveState();
+    }
+
+    function updateEstimateSubtitle(val) {
+      textEstimateSubtitle = val;
+      renderCustomTextElements();
+      saveState();
+    }
+
+    function updateProposalTitle(val) {
+      textProposalTitle = val;
+      renderCustomTextElements();
+      saveState();
+    }
+
+    function updateQuotePrefix(val) {
+      textQuotePrefix = val;
+      renderCustomTextElements();
+      saveState();
+    }
+
+    function renderBranding() {
+      const nameEl = document.getElementById('brand-name-display');
+      const taglineEl = document.getElementById('brand-tagline-display');
+      const footerBrandEl = document.getElementById('footer-brand-name');
+      const iconEl = document.getElementById('brand-icon-el');
+      const imgEl = document.getElementById('brand-logo-img');
+
+      const previewIconEl = document.getElementById('admin-logo-preview-icon');
+      const previewImgEl = document.getElementById('admin-logo-preview-img');
+
+      if (nameEl) nameEl.innerText = brandName;
+      if (taglineEl) taglineEl.innerText = brandTagline;
+      if (footerBrandEl) footerBrandEl.innerText = brandName;
+
+      document.title = `${brandName} - Customizer & Rental Calculator`;
+
+      if (brandLogoImage) {
+        if (imgEl) {
+          imgEl.src = brandLogoImage;
+          imgEl.classList.remove('hidden');
+        }
+        if (iconEl) iconEl.classList.add('hidden');
+
+        if (previewImgEl) {
+          previewImgEl.src = brandLogoImage;
+          previewImgEl.classList.remove('hidden');
+        }
+        if (previewIconEl) previewIconEl.classList.add('hidden');
+      } else {
+        if (imgEl) imgEl.classList.add('hidden');
+        if (iconEl) {
+          iconEl.classList.remove('hidden');
+          iconEl.setAttribute('data-lucide', brandIcon);
+        }
+
+        if (previewImgEl) previewImgEl.classList.add('hidden');
+        if (previewIconEl) {
+          previewIconEl.classList.remove('hidden');
+          previewIconEl.setAttribute('data-lucide', brandIcon);
+        }
+      }
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function updateBrandName(value) {
+      brandName = value.trim() || 'My Candy Company';
+      renderBranding();
+      saveState();
+    }
+
+    function updateBrandTagline(value) {
+      brandTagline = value.trim();
+      renderBranding();
+      saveState();
+    }
+
+    function handleBrandLogoUpload(inputElement) {
+      const file = inputElement.files && inputElement.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        brandLogoImage = e.target.result;
+        renderBranding();
+        saveState();
+        showToast('Brand logo image updated!');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeBrandLogoImage() {
+      brandLogoImage = null;
+      renderBranding();
+      saveState();
+      showToast('Switched to icon logo');
+    }
+
+    function selectBrandIcon(iconName) {
+      brandIcon = iconName;
+      brandLogoImage = null;
+      renderBranding();
+      saveState();
+      showToast(`Selected ${iconName} icon`);
+    }
+
+    function renderBoothFooter() {
+      const leftEl = document.getElementById('footer-left-display');
+      const rightEl = document.getElementById('footer-right-display');
+      if (leftEl) leftEl.innerText = boothFooterLeft;
+      if (rightEl) rightEl.innerText = boothFooterRight;
+    }
+
+    function updateFooterText(side, value) {
+      if (side === 'left') {
+        boothFooterLeft = value;
+      } else {
+        boothFooterRight = value;
+      }
+      renderBoothFooter();
+      saveState();
+    }
+
+    function clearBoothFooterTexts() {
+      boothFooterLeft = '';
+      boothFooterRight = '';
+      const leftInput = document.getElementById('admin-footer-left');
+      const rightInput = document.getElementById('admin-footer-right');
+      if (leftInput) leftInput.value = '';
+      if (rightInput) rightInput.value = '';
+      renderBoothFooter();
+      saveState();
+      showToast('Cleared booth footer texts');
+    }
+
+    function updateBaseFee(val) {
+      const num = parseFloat(val);
+      if (!isNaN(num) && num >= 0) {
+        baseRentalPrice = num;
+        saveState();
+        recalculate();
+        showToast(`Base rental fee set to $${num.toFixed(2)}`);
+      }
+    }
+
+    function getCandyVisualHtml(candy, sizeClass = "w-14 h-14") {
+      if (candy.image) {
+        return `<img src="${candy.image}" alt="${candy.name}" class="${sizeClass} object-contain rounded-lg drop-shadow-md select-none pointer-events-none">`;
+      }
+      return `<div class="${sizeClass} flex items-center justify-center">${candy.iconSvg || '<span class="text-3xl">🍬</span>'}</div>`;
+    }
+
+    function renderCustomerAddons() {
+      const container = document.getElementById('customer-addons-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const visibleAddons = customAddons.filter(a => a.enabled !== false);
+
+      if (visibleAddons.length === 0) {
+        container.innerHTML = `<p class="text-xs text-stone-400 italic py-2">No event add-ons currently available.</p>`;
+        return;
+      }
+
+      visibleAddons.forEach(addon => {
+        const isChecked = selectedAddonIds.has(addon.id);
+        const label = document.createElement('label');
+        label.className = 'flex items-start gap-3 p-2.5 rounded-2xl hover:bg-stone-50 border border-transparent hover:border-stone-200 transition cursor-pointer select-none';
+        
+        label.innerHTML = `
+          <input type="checkbox" id="client-addon-${addon.id}" ${isChecked ? 'checked' : ''} onchange="toggleAddonSelection('${addon.id}', this.checked)" class="mt-1 rounded text-stone-900 focus:ring-amber-500 w-4 h-4 accent-amber-600 cursor-pointer">
+          <div class="flex-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-stone-800">${addon.name}</span>
+              <span class="text-xs font-bold text-amber-700">+$${Number(addon.price).toFixed(0)}</span>
+            </div>
+            <p class="text-[11px] text-stone-500">${addon.description || 'Optional event upgrade'}</p>
+          </div>
+        `;
+
+        container.appendChild(label);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function toggleAddonSelection(addonId, isChecked) {
+      if (isChecked) {
+        selectedAddonIds.add(addonId);
+      } else {
+        selectedAddonIds.delete(addonId);
+      }
+
+      if (addonId === 'led') {
+        toggleLedBacklight(isChecked);
+      }
+
+      recalculate();
+    }
+
+    function renderBins() {
+      const container = document.getElementById('wall-grid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      bins.forEach((candy, index) => {
+        const binEl = document.createElement('div');
+        const isActive = activeSlotIndex === index;
+
+        binEl.className = `relative group h-[104px] sm:h-32 rounded-2xl transition-all duration-200 cursor-pointer flex flex-col items-center justify-between p-2 select-none overflow-hidden ${
+          isActive 
+            ? 'ring-2 ring-amber-500 ring-offset-2 ring-offset-stone-50 shadow-md bg-amber-50/40 active-slot-pulse' 
+            : 'hover:shadow-md'
+        } ${candy ? 'acrylic-bin border border-stone-200/90 shadow-acrylic' : 'border-2 border-dashed border-stone-300 hover:border-amber-400 bg-white/70 hover:bg-white/95'}`;
+
+        binEl.ondragover = (e) => {
+          e.preventDefault();
+          binEl.classList.add('border-amber-500', 'bg-amber-50/70');
+        };
+        binEl.ondragleave = () => {
+          binEl.classList.remove('border-amber-500', 'bg-amber-50/70');
+        };
+        binEl.ondrop = (e) => {
+          e.preventDefault();
+          binEl.classList.remove('border-amber-500', 'bg-amber-50/70');
+          const candyId = e.dataTransfer.getData('text/plain');
+          const found = candyCatalog.find(c => c.id === candyId);
+          if (found) {
+            fillSlot(index, found);
+          }
+        };
+
+        binEl.onclick = () => {
+          setActiveSlot(index);
+        };
+
+        if (candy) {
+          binEl.innerHTML = `
+            <div class="w-full flex items-center justify-between text-[10px] text-stone-500 font-medium z-10">
+              <span class="bg-amber-100/95 text-amber-900 font-bold px-1.5 py-0.5 rounded-full shadow-xs">$${Number(candy.price).toFixed(0)}</span>
+              <button onclick="event.stopPropagation(); removeSlot(${index});" title="Empty this bin" class="text-stone-400 hover:text-red-500 p-0.5 rounded hover:bg-red-50 transition cursor-pointer">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <div class="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center my-0.5 transform group-hover:scale-110 transition duration-200 z-10">
+              ${getCandyVisualHtml(candy, "w-12 h-12 sm:w-14 sm:h-14")}
+            </div>
+
+            <div class="w-full text-center z-10">
+              <p class="text-[10px] sm:text-[11px] font-semibold text-stone-800 truncate px-1" title="${candy.name}">
+                ${candy.name}
+              </p>
+              <div class="text-[9px] text-stone-400 -mt-0.5 font-medium">Bin ${index + 1}</div>
+            </div>
+
+            <div class="absolute inset-0 acrylic-glare pointer-events-none"></div>
+            <div class="absolute inset-x-2 bottom-1 h-3 acrylic-shelf-lip border-t border-white/80 rounded-b-xl pointer-events-none"></div>
+          `;
+        } else {
+          binEl.innerHTML = `
+            <div class="w-full flex justify-between items-center text-[10px] text-stone-400">
+              <span class="font-mono">#0${index + 1}</span>
+              ${isActive ? '<span class="text-[9px] bg-amber-500 text-white font-bold px-1.5 py-0.2 rounded-full uppercase">Target</span>' : ''}
+            </div>
+
+            <div class="flex flex-col items-center justify-center my-auto text-stone-400 group-hover:text-amber-700 transition">
+              <div class="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center mb-1 group-hover:bg-amber-100 transition">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+              </div>
+              <span class="text-[10px] font-medium">Empty Bin</span>
+            </div>
+
+            <div class="text-[9px] text-stone-400">Tap to load</div>
+          `;
+        }
+
+        container.appendChild(binEl);
+      });
+
+      const filledCount = bins.filter(Boolean).length;
+      const counterEl = document.getElementById('bins-filled-counter');
+      if (counterEl) counterEl.innerText = `${filledCount} / 9 Bins Filled`;
+      
+      const pct = Math.round((filledCount / 9) * 100);
+      const percentEl = document.getElementById('progress-percent');
+      if (percentEl) percentEl.innerText = `${pct}%`;
+      
+      const barEl = document.getElementById('progress-bar');
+      if (barEl) barEl.style.width = `${pct}%`;
+
+      const banner = document.getElementById('banner-text');
+      if (banner) {
+        banner.innerHTML = `Targeting: <strong>Bin ${activeSlotIndex + 1}</strong> (${bins[activeSlotIndex] ? bins[activeSlotIndex].name : 'Empty'})`;
+      }
+
+      saveState();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderCatalog() {
+      const container = document.getElementById('candy-catalog-grid');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const filtered = candyCatalog.filter(c => {
+        if (currentCategoryFilter === 'all') return true;
+        return c.category === currentCategoryFilter;
+      });
+
+      filtered.forEach(candy => {
+        const card = document.createElement('div');
+        card.className = 'group relative p-3 rounded-2xl border border-stone-200 hover:border-amber-400 bg-white hover:bg-amber-50/30 transition-all duration-200 shadow-sm flex flex-col justify-between cursor-pointer';
+        card.draggable = true;
+
+        card.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', candy.id);
+          card.classList.add('opacity-50');
+        };
+        card.ondragend = () => {
+          card.classList.remove('opacity-50');
+        };
+
+        card.onclick = () => {
+          fillSlot(activeSlotIndex, candy);
+          findAndSetNextEmptySlot();
+        };
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 text-stone-700">${candy.badge || 'Sweet'}</span>
+            <span class="text-xs font-bold text-amber-800">$${Number(candy.price).toFixed(0)}</span>
+          </div>
+
+          <div class="w-14 h-14 mx-auto my-1 transform group-hover:scale-110 transition duration-200 flex items-center justify-center">
+            ${getCandyVisualHtml(candy, "w-14 h-14")}
+          </div>
+
+          <div>
+            <h4 class="text-xs font-bold text-stone-800 truncate" title="${candy.name}">${candy.name}</h4>
+            <p class="text-[10px] text-stone-400 line-clamp-1 mt-0.5">${candy.description || 'Delicious gourmet treat'}</p>
+          </div>
+
+          <button class="mt-2.5 w-full py-1 text-[11px] font-semibold text-stone-700 group-hover:text-amber-950 bg-stone-100 group-hover:bg-amber-200 rounded-lg transition flex items-center justify-center gap-1 cursor-pointer">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>Add to Bin ${activeSlotIndex + 1}</span>
+          </button>
+        `;
+
+        container.appendChild(card);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    /* ---------- Categories (owner can add / rename / delete) ---------- */
+    function escapeHtmlText(v) {
+      return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function categoryPillClass(active) {
+      return 'cat-pill whitespace-nowrap shrink-0 px-3 py-1.5 rounded-full font-medium transition ' +
+        (active ? 'active bg-stone-900 text-white' : 'bg-stone-100 text-stone-600 hover:bg-stone-200');
+    }
+
+    function ensureCategoriesForCandies() {
+      candyCatalog.forEach(c => {
+        if (c.category && !categories.some(k => k.id === c.category)) {
+          categories.push({ id: c.category, name: c.category.charAt(0).toUpperCase() + c.category.slice(1) });
+        }
+      });
+    }
+
+    function categoryOptionsHtml(selectedId) {
+      return `<option value="" ${!selectedId ? 'selected' : ''}>No category</option>` +
+        categories.map(k => `<option value="${escapeHtmlText(k.id)}" ${k.id === selectedId ? 'selected' : ''}>${escapeHtmlText(k.name)}</option>`).join('');
+    }
+
+    function renderCategoryTabs() {
+      const wrap = document.getElementById('category-tabs');
+      if (!wrap) return;
+      if (currentCategoryFilter !== 'all' && !categories.some(k => k.id === currentCategoryFilter)) currentCategoryFilter = 'all';
+      const mk = (id, name) => `<button onclick="filterCatalog(this.dataset.cat)" class="${categoryPillClass(id === currentCategoryFilter)}" data-cat="${escapeHtmlText(id)}">${escapeHtmlText(name)}</button>`;
+      wrap.innerHTML = mk('all', 'All') + categories.map(k => mk(k.id, k.name)).join('');
+    }
+
+    function renderCategorySelect() {
+      const sel = document.getElementById('new-candy-category');
+      if (!sel) return;
+      const prev = sel.value;
+      const pick = (prev && categories.some(k => k.id === prev)) ? prev : (categories[0] ? categories[0].id : '');
+      sel.innerHTML = categoryOptionsHtml(pick);
+    }
+
+    function renderCategoryManager() {
+      const el = document.getElementById('admin-category-list');
+      if (!el) return;
+      if (categories.length === 0) {
+        el.innerHTML = '<p class="text-xs text-stone-400 italic">No categories yet. Add your first one below.</p>';
+        return;
+      }
+      el.innerHTML = categories.map((k, i) => {
+        const used = candyCatalog.filter(c => c.category === k.id).length;
+        return `<div class="flex items-center gap-1 bg-white border border-stone-200 rounded-full pl-3 pr-1 py-1 text-xs">
+          <input type="text" value="${escapeHtmlText(k.name)}" maxlength="30" onchange="renameCategory(${i}, this.value)" aria-label="Category name" class="bg-transparent focus:outline-none focus:bg-stone-50 rounded px-1 w-28 sm:w-32 text-stone-700 font-medium">
+          <span class="text-[10px] text-stone-400">${used}</span>
+          <button onclick="deleteCategory(${i})" title="Delete category" aria-label="Delete category" class="w-6 h-6 rounded-full hover:bg-red-50 hover:text-red-600 text-stone-400 flex items-center justify-center cursor-pointer">
+            <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>`;
+      }).join('');
+    }
+
+    function renderCategoryUI() {
+      renderCategoryTabs();
+      renderCategorySelect();
+      renderCategoryManager();
+      renderAdminCatalog();
+      renderCatalog();
+      saveState();
+    }
+
+    function addCategory() {
+      const input = document.getElementById('new-category-name');
+      if (!input) return;
+      const name = input.value.trim();
+      if (!name) { showToast('Type a category name first'); return; }
+      if (categories.some(k => k.name.toLowerCase() === name.toLowerCase())) { showToast('That category already exists'); return; }
+      let base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'category';
+      let id = base, n = 2;
+      while (categories.some(k => k.id === id)) id = base + '-' + (n++);
+      categories.push({ id: id, name: name });
+      input.value = '';
+      renderCategoryUI();
+      showToast(`Category "${name}" added`);
+    }
+
+    function renameCategory(index, value) {
+      const name = (value || '').trim();
+      if (!categories[index]) return;
+      if (!name) { renderCategoryManager(); return; }
+      categories[index].name = name;
+      renderCategoryUI();
+    }
+
+    function deleteCategory(index) {
+      const k = categories[index];
+      if (!k) return;
+      candyCatalog.forEach(c => { if (c.category === k.id) c.category = ''; });
+      categories.splice(index, 1);
+      renderCategoryUI();
+      showToast(`Deleted "${k.name}". Its candies are now uncategorized.`);
+    }
+
+    function filterCatalog(category) {
+      currentCategoryFilter = category;
+      document.querySelectorAll('.cat-pill').forEach(btn => {
+        btn.className = categoryPillClass(btn.getAttribute('data-cat') === category);
+      });
+      renderCatalog();
+    }
+
+    function promptAdminPin() {
+      if (isAdminUnlocked) {
+        openInventoryModal('candies');
+        return;
+      }
+      const pinModal = document.getElementById('pin-modal');
+      const errorMsg = document.getElementById('pin-error-msg');
+      const input = document.getElementById('enter-pin-input');
+      if (errorMsg) errorMsg.classList.add('hidden');
+      if (input) input.value = '';
+      if (pinModal) pinModal.classList.remove('hidden');
+      setTimeout(() => { if (input) input.focus(); }, 100);
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closePinModal() {
+      const pinModal = document.getElementById('pin-modal');
+      if (pinModal) pinModal.classList.add('hidden');
+    }
+
+    function verifyAdminPin() {
+      const input = document.getElementById('enter-pin-input');
+      const errorMsg = document.getElementById('pin-error-msg');
+      if (!input) return;
+
+      if (input.value.trim() === adminPin) {
+        isAdminUnlocked = true;
+        closePinModal();
+        openInventoryModal('candies');
+        showToast('Admin authorized');
+      } else {
+        if (errorMsg) errorMsg.classList.remove('hidden');
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    function updateAdminPin() {
+      const input = document.getElementById('admin-pin-input');
+      if (!input) return;
+      const newPin = input.value.trim();
+      if (newPin.length < 4) {
+        showToast('PIN must be at least 4 characters');
+        return;
+      }
+      adminPin = newPin;
+      saveState();
+      showToast('Security PIN successfully updated!');
+    }
+
+    function exportConfigJson() {
+      const exportData = {
+        brandName: brandName,
+        brandTagline: brandTagline,
+        brandLogoImage: brandLogoImage,
+        brandIcon: brandIcon,
+        baseRentalPrice: baseRentalPrice,
+        candyCatalog: candyCatalog,
+        categories: categories,
+        customAddons: customAddons,
+        boothFooterLeft: boothFooterLeft,
+        boothFooterRight: boothFooterRight,
+        textMenuTitle: textMenuTitle,
+        textMenuSubtitle: textMenuSubtitle,
+        textEstimateTitle: textEstimateTitle,
+        textEstimateSubtitle: textEstimateSubtitle,
+        textProposalTitle: textProposalTitle,
+        textQuotePrefix: textQuotePrefix,
+        exportedAt: new Date().toISOString()
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "candy-wall-config.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      showToast('Configuration exported as JSON');
+    }
+
+    function importConfigJson(inputEl) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const imported = JSON.parse(e.target.result);
+          if (imported.brandName && typeof imported.brandName === 'string') {
+            brandName = imported.brandName;
+          }
+          if (imported.brandTagline && typeof imported.brandTagline === 'string') {
+            brandTagline = imported.brandTagline;
+          }
+          if (imported.brandLogoImage) {
+            brandLogoImage = imported.brandLogoImage;
+          }
+          if (imported.brandIcon) {
+            brandIcon = imported.brandIcon;
+          }
+          if (imported.candyCatalog && Array.isArray(imported.candyCatalog)) {
+            candyCatalog = imported.candyCatalog;
+          }
+          if (Array.isArray(imported.categories)) {
+            categories = imported.categories.filter(k => k && k.id && k.name);
+          }
+          ensureCategoriesForCandies();
+          if (imported.customAddons && Array.isArray(imported.customAddons)) {
+            customAddons = imported.customAddons;
+          }
+          if (typeof imported.baseRentalPrice === 'number') {
+            baseRentalPrice = imported.baseRentalPrice;
+          }
+          if (typeof imported.boothFooterLeft === 'string') {
+            boothFooterLeft = imported.boothFooterLeft;
+          }
+          if (typeof imported.boothFooterRight === 'string') {
+            boothFooterRight = imported.boothFooterRight;
+          }
+          if (typeof imported.textMenuTitle === 'string') {
+            textMenuTitle = imported.textMenuTitle;
+          }
+          if (typeof imported.textMenuSubtitle === 'string') {
+            textMenuSubtitle = imported.textMenuSubtitle;
+          }
+          if (typeof imported.textEstimateTitle === 'string') {
+            textEstimateTitle = imported.textEstimateTitle;
+          }
+          if (typeof imported.textEstimateSubtitle === 'string') {
+            textEstimateSubtitle = imported.textEstimateSubtitle;
+          }
+          if (typeof imported.textProposalTitle === 'string') {
+            textProposalTitle = imported.textProposalTitle;
+          }
+          if (typeof imported.textQuotePrefix === 'string') {
+            textQuotePrefix = imported.textQuotePrefix;
+          }
+
+          saveState();
+          renderCategoryUI();
+          renderBranding();
+          renderCustomTextElements();
+          renderBins();
+          renderCatalog();
+          renderCustomerAddons();
+          renderAdminCatalog();
+          renderAdminAddons();
+          renderBoothFooter();
+          recalculate();
+          showToast('Configuration imported successfully!');
+        } catch (err) {
+          showToast('Invalid configuration file format');
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function openInventoryModal(targetTab = 'candies') {
+      renderAdminCatalog();
+      renderAdminAddons();
+      switchAdminTab(targetTab);
+      const modal = document.getElementById('inventory-modal');
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+      updateAdminTabArrows();
+    }
+
+    function closeInventoryModal() {
+      const modal = document.getElementById('inventory-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function updateAdminTabArrows() {
+      const sc = document.getElementById('admin-tabs-scroll');
+      const l = document.getElementById('admin-tabs-left');
+      const r = document.getElementById('admin-tabs-right');
+      if (!sc || !l || !r) return;
+      l.style.display = sc.scrollLeft > 4 ? 'flex' : 'none';
+      r.style.display = (sc.scrollLeft + sc.clientWidth < sc.scrollWidth - 4) ? 'flex' : 'none';
+    }
+
+    function scrollAdminTabs(dir) {
+      const sc = document.getElementById('admin-tabs-scroll');
+      if (sc) sc.scrollBy({ left: dir * 220, behavior: 'smooth' });
+    }
+
+    function initAdminTabs() {
+      const sc = document.getElementById('admin-tabs-scroll');
+      if (!sc) return;
+      // Mouse wheel scrolls tabs sideways
+      sc.addEventListener('wheel', (e) => {
+        if (sc.scrollWidth <= sc.clientWidth) return;
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        sc.scrollLeft += delta;
+        e.preventDefault();
+      }, { passive: false });
+      // Click and drag to scroll
+      let down = false, moved = false, startX = 0, startLeft = 0;
+      sc.addEventListener('mousedown', (e) => { down = true; moved = false; startX = e.pageX; startLeft = sc.scrollLeft; });
+      window.addEventListener('mousemove', (e) => {
+        if (!down) return;
+        const dx = e.pageX - startX;
+        if (Math.abs(dx) > 5) { moved = true; sc.classList.add('dragging'); }
+        if (moved) sc.scrollLeft = startLeft - dx;
+      });
+      window.addEventListener('mouseup', () => { down = false; sc.classList.remove('dragging'); });
+      sc.addEventListener('click', (e) => { if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; } }, true);
+      sc.addEventListener('scroll', updateAdminTabArrows);
+      window.addEventListener('resize', updateAdminTabArrows);
+    }
+
+    function switchAdminTab(tab) {
+      const btnCandies = document.getElementById('admin-tab-btn-candies');
+      const btnAddons = document.getElementById('admin-tab-btn-addons');
+      const btnSettings = document.getElementById('admin-tab-btn-settings');
+      const btnBranding = document.getElementById('admin-tab-btn-branding');
+      const btnText = document.getElementById('admin-tab-btn-text');
+
+      const panelCandies = document.getElementById('admin-candies-panel');
+      const panelAddons = document.getElementById('admin-addons-panel');
+      const panelSettings = document.getElementById('admin-settings-panel');
+      const panelBranding = document.getElementById('admin-branding-panel');
+      const panelText = document.getElementById('admin-text-panel');
+
+      if (!btnCandies || !btnAddons || !btnSettings || !btnBranding || !btnText || !panelCandies || !panelAddons || !panelSettings || !panelBranding || !panelText) return;
+
+      const tabs = [
+        { btn: btnCandies, panel: panelCandies, name: 'candies' },
+        { btn: btnAddons, panel: panelAddons, name: 'addons' },
+        { btn: btnSettings, panel: panelSettings, name: 'settings' },
+        { btn: btnBranding, panel: panelBranding, name: 'branding' },
+        { btn: btnText, panel: panelText, name: 'text' }
+      ];
+
+      tabs.forEach(t => {
+        if (!t.btn || !t.panel) return;
+        if (t.name === tab) {
+          t.btn.className = 'px-4 py-2.5 border-b-2 border-stone-900 text-stone-900 flex items-center gap-2 transition whitespace-nowrap cursor-pointer';
+          t.panel.classList.remove('hidden');
+          try { t.btn.scrollIntoView({ inline: 'nearest', block: 'nearest' }); } catch (e) {}
+        } else {
+          t.btn.className = 'px-4 py-2.5 border-b-2 border-transparent text-stone-500 hover:text-stone-800 flex items-center gap-2 transition whitespace-nowrap cursor-pointer';
+          t.panel.classList.add('hidden');
+        }
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderAdminCatalog() {
+      const container = document.getElementById('admin-candy-list');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const countEl = document.getElementById('admin-candy-count');
+      const tabCountEl = document.getElementById('admin-candy-tab-count');
+      if (countEl) countEl.innerText = candyCatalog.length;
+      if (tabCountEl) tabCountEl.innerText = candyCatalog.length;
+      if (typeof renderCategoryManager === 'function') renderCategoryManager();
+
+      candyCatalog.forEach((candy, idx) => {
+        const row = document.createElement('div');
+        row.className = 'p-3.5 bg-white rounded-2xl border border-stone-200 hover:border-stone-300 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3';
+
+        row.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="relative w-12 h-12 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center p-1 shrink-0 group">
+              ${getCandyVisualHtml(candy, "w-10 h-10")}
+              <label class="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center cursor-pointer transition text-white text-[9px] font-bold">
+                Photo
+                <input type="file" accept="image/*" class="hidden" onchange="uploadCandyPhoto(${idx}, this)">
+              </label>
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <input type="text" value="${candy.name}" onchange="updateCandyField(${idx}, 'name', this.value)" class="w-full text-xs font-bold text-stone-800 border-b border-transparent hover:border-stone-300 focus:border-amber-500 focus:outline-none px-1 py-0.5 rounded transition" placeholder="Candy Name">
+              <div class="flex items-center gap-2 mt-1">
+                <select onchange="updateCandyField(${idx}, 'category', this.value)" class="text-[11px] text-stone-500 bg-stone-50 border border-stone-200 rounded px-1.5 py-0.5">
+                  ${categoryOptionsHtml(candy.category)}
+                </select>
+                <input type="text" value="${candy.badge || ''}" onchange="updateCandyField(${idx}, 'badge', this.value)" placeholder="Badge tag" class="w-20 text-[10px] text-stone-500 bg-stone-50 border border-stone-200 rounded px-1.5 py-0.5">
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-stone-500">Price: $</span>
+              <input type="number" value="${candy.price}" min="1" step="1" onchange="updateCandyField(${idx}, 'price', parseFloat(this.value) || 0)" class="w-20 text-xs font-bold text-stone-800 px-2 py-1 rounded-lg border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 text-right">
+            </div>
+
+            <label class="px-2.5 py-1 text-[11px] font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-lg cursor-pointer border border-stone-300 transition">
+              Upload
+              <input type="file" accept="image/*" class="hidden" onchange="uploadCandyPhoto(${idx}, this)">
+            </label>
+
+            <button onclick="deleteCandy(${idx})" title="Delete candy" class="p-1.5 text-stone-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        `;
+
+        container.appendChild(row);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function updateCandyField(index, field, value) {
+      if (!candyCatalog[index]) return;
+      candyCatalog[index][field] = value;
+
+      bins = bins.map(binCandy => {
+        if (binCandy && binCandy.id === candyCatalog[index].id) {
+          return { ...binCandy, [field]: value };
+        }
+        return binCandy;
+      });
+
+      renderBins();
+      renderCatalog();
+      recalculate();
+      saveState();
+      showToast(`Updated ${candyCatalog[index].name}`);
+    }
+
+    function uploadCandyPhoto(index, inputElement) {
+      const file = inputElement.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        candyCatalog[index].image = dataUrl;
+
+        bins = bins.map(binCandy => {
+          if (binCandy && binCandy.id === candyCatalog[index].id) {
+            return { ...binCandy, image: dataUrl };
+          }
+          return binCandy;
+        });
+
+        renderBins();
+        renderCatalog();
+        renderAdminCatalog();
+        saveState();
+        showToast(`Uploaded new photo for ${candyCatalog[index].name}!`);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleAddNewCandy() {
+      const nameInput = document.getElementById('new-candy-name');
+      const priceInput = document.getElementById('new-candy-price');
+      const categoryInput = document.getElementById('new-candy-category');
+      const fileInput = document.getElementById('new-candy-file');
+
+      if (!nameInput || !priceInput || !categoryInput || !fileInput) return;
+
+      const name = nameInput.value.trim();
+      const price = parseFloat(priceInput.value);
+      const category = categoryInput.value;
+
+      if (!name) {
+        showToast('Please enter a candy name');
+        return;
+      }
+      if (isNaN(price) || price <= 0) {
+        showToast('Please enter a valid price');
+        return;
+      }
+
+      const id = 'custom-' + Date.now();
+      const newCandy = {
+        id: id,
+        name: name,
+        category: category,
+        price: price,
+        badge: 'Custom',
+        description: 'Bespoke event confection selection',
+        image: null,
+        iconSvg: `<svg viewBox="0 0 48 48" class="w-full h-full"><circle cx="24" cy="24" r="16" fill="#FBBF24"/><path d="M12 24 L24 12 L36 24 L24 36 Z" fill="#D97706"/></svg>`
+      };
+
+      const finishAdd = () => {
+        candyCatalog.unshift(newCandy);
+        nameInput.value = '';
+        priceInput.value = '';
+        fileInput.value = '';
+
+        renderBins();
+        renderCatalog();
+        renderAdminCatalog();
+        saveState();
+        showToast(`Added "${name}" to your candy inventory!`);
+      };
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          newCandy.image = e.target.result;
+          finishAdd();
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        finishAdd();
+      }
+    }
+
+    function deleteCandy(index) {
+      const candyToDelete = candyCatalog[index];
+      if (!candyToDelete) return;
+
+      bins = bins.map(c => (c && c.id === candyToDelete.id ? null : c));
+
+      candyCatalog.splice(index, 1);
+      renderBins();
+      renderCatalog();
+      renderAdminCatalog();
+      recalculate();
+      saveState();
+      showToast(`Removed "${candyToDelete.name}" from inventory`);
+    }
+
+    function resetInventoryToDefault() {
+      candyCatalog = JSON.parse(JSON.stringify(DEFAULT_CANDY_CATALOG));
+      renderBins();
+      renderCatalog();
+      renderAdminCatalog();
+      recalculate();
+      saveState();
+      ensureCategoriesForCandies();
+      renderCategoryUI();
+      showToast('Restored default candy catalog');
+    }
+
+    function renderAdminAddons() {
+      const container = document.getElementById('admin-addons-list');
+      if (!container) return;
+      container.innerHTML = '';
+      
+      const countEl = document.getElementById('admin-addons-count');
+      const tabCountEl = document.getElementById('admin-addons-tab-count');
+      if (countEl) countEl.innerText = customAddons.length;
+      if (tabCountEl) tabCountEl.innerText = customAddons.length;
+
+      customAddons.forEach((addon, idx) => {
+        const isEnabled = addon.enabled !== false;
+        const row = document.createElement('div');
+        row.className = `p-3.5 bg-white rounded-2xl border ${isEnabled ? 'border-stone-200' : 'border-dashed border-stone-300 opacity-60'} hover:border-stone-300 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3`;
+
+        row.innerHTML = `
+          <div class="flex-1 min-w-0 space-y-1">
+            <div class="flex items-center gap-2">
+              <input type="text" value="${addon.name}" onchange="updateAddonField(${idx}, 'name', this.value)" class="w-full text-xs font-bold text-stone-800 border-b border-transparent hover:border-stone-300 focus:border-amber-500 focus:outline-none px-1 py-0.5 rounded transition" placeholder="Service Name">
+              <span class="text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${isEnabled ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'}">
+                ${isEnabled ? 'Active' : 'Disabled'}
+              </span>
+            </div>
+            <input type="text" value="${addon.description || ''}" onchange="updateAddonField(${idx}, 'description', this.value)" class="w-full text-[11px] text-stone-500 border-b border-transparent hover:border-stone-200 focus:border-amber-500 focus:outline-none px-1" placeholder="Service subtitle or description">
+          </div>
+
+          <div class="flex items-center justify-between md:justify-end gap-3 pt-2 md:pt-0 border-t md:border-t-0 border-stone-100">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-semibold text-stone-500">Price: $</span>
+              <input type="number" value="${addon.price}" min="0" step="1" onchange="updateAddonField(${idx}, 'price', parseFloat(this.value) || 0)" class="w-20 text-xs font-bold text-stone-800 px-2 py-1 rounded-lg border border-stone-300 focus:outline-none focus:ring-1 focus:ring-amber-500 text-right">
+            </div>
+
+            <button onclick="toggleAddonVisibility(${idx})" class="px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition cursor-pointer ${isEnabled ? 'bg-stone-100 hover:bg-stone-200 text-stone-700 border-stone-300' : 'bg-amber-100 text-amber-900 border-amber-300'}">
+              ${isEnabled ? 'Disable' : 'Enable'}
+            </button>
+
+            <button onclick="deleteAddon(${idx})" title="Delete service" class="p-1.5 text-stone-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition cursor-pointer">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        `;
+
+        container.appendChild(row);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function updateAddonField(index, field, value) {
+      if (!customAddons[index]) return;
+      customAddons[index][field] = value;
+      saveState();
+      renderCustomerAddons();
+      renderAdminAddons();
+      recalculate();
+      showToast(`Updated service "${customAddons[index].name}"`);
+    }
+
+    function toggleAddonVisibility(index) {
+      if (!customAddons[index]) return;
+      const nextState = !(customAddons[index].enabled !== false);
+      customAddons[index].enabled = nextState;
+
+      if (!nextState && selectedAddonIds.has(customAddons[index].id)) {
+        selectedAddonIds.delete(customAddons[index].id);
+        if (customAddons[index].id === 'led') toggleLedBacklight(false);
+      }
+
+      saveState();
+      renderCustomerAddons();
+      renderAdminAddons();
+      recalculate();
+      showToast(`${customAddons[index].name} is now ${nextState ? 'visible' : 'hidden'} from customer panel.`);
+    }
+
+    function handleAddNewAddon() {
+      const nameInput = document.getElementById('new-addon-name');
+      const priceInput = document.getElementById('new-addon-price');
+      const descInput = document.getElementById('new-addon-desc');
+
+      if (!nameInput || !priceInput || !descInput) return;
+
+      const name = nameInput.value.trim();
+      const price = parseFloat(priceInput.value);
+      const description = descInput.value.trim();
+
+      if (!name) {
+        showToast('Please enter an add-on service title');
+        return;
+      }
+      if (isNaN(price) || price < 0) {
+        showToast('Please enter a valid price');
+        return;
+      }
+
+      const newAddon = {
+        id: 'addon-' + Date.now(),
+        name: name,
+        price: price,
+        description: description || 'Premium event enhancement',
+        enabled: true,
+        isCustom: true
+      };
+
+      customAddons.push(newAddon);
+      nameInput.value = '';
+      priceInput.value = '';
+      descInput.value = '';
+
+      saveState();
+      renderCustomerAddons();
+      renderAdminAddons();
+      recalculate();
+      showToast(`Added "${name}" to event upgrades!`);
+    }
+
+    function deleteAddon(index) {
+      const addon = customAddons[index];
+      if (!addon) return;
+
+      if (selectedAddonIds.has(addon.id)) {
+        selectedAddonIds.delete(addon.id);
+        if (addon.id === 'led') toggleLedBacklight(false);
+      }
+
+      customAddons.splice(index, 1);
+      saveState();
+      renderCustomerAddons();
+      renderAdminAddons();
+      recalculate();
+      showToast(`Removed "${addon.name}"`);
+    }
+
+    function resetAddonsToDefault() {
+      customAddons = JSON.parse(JSON.stringify(DEFAULT_ADDONS_LIST));
+      selectedAddonIds.clear();
+      toggleLedBacklight(false);
+      saveState();
+      renderCustomerAddons();
+      renderAdminAddons();
+      recalculate();
+      showToast('Restored default add-on services');
+    }
+
+    function setActiveSlot(index) {
+      activeSlotIndex = index;
+      renderBins();
+      renderCatalog();
+    }
+
+    function fillSlot(slotIndex, candy) {
+      bins[slotIndex] = candy;
+      showToast(`Placed ${candy.name} into Bin ${slotIndex + 1}!`);
+      renderBins();
+      recalculate();
+    }
+
+    function removeSlot(slotIndex) {
+      const removed = bins[slotIndex];
+      bins[slotIndex] = null;
+      if (removed) {
+        showToast(`Cleared Bin ${slotIndex + 1}`);
+      }
+      renderBins();
+      recalculate();
+    }
+
+    function findAndSetNextEmptySlot() {
+      const nextEmpty = bins.findIndex((b, idx) => b === null && idx > activeSlotIndex);
+      if (nextEmpty !== -1) {
+        activeSlotIndex = nextEmpty;
+      } else {
+        const anyEmpty = bins.findIndex(b => b === null);
+        if (anyEmpty !== -1) activeSlotIndex = anyEmpty;
+      }
+      renderBins();
+      renderCatalog();
+    }
+
+    function clearAllBins() {
+      bins = Array(9).fill(null);
+      activeSlotIndex = 0;
+      showToast('Emptied all 9 candy bins');
+      renderBins();
+      renderCatalog();
+      recalculate();
+    }
+
+    function toggleLedBacklight(isChecked) {
+      const archBoard = document.getElementById('arch-display-board');
+      if (!archBoard) return;
+      if (isChecked) {
+        archBoard.style.boxShadow = '0 0 65px rgba(251, 191, 36, 0.45), 0 35px 80px -15px rgba(50, 40, 30, 0.2)';
+      } else {
+        archBoard.style.boxShadow = '';
+      }
+    }
+
+    function recalculate() {
+      const filledCandies = bins.filter(Boolean);
+      const candySubtotal = filledCandies.reduce((sum, item) => sum + Number(item.price), 0);
+
+      let addOnsTotal = 0;
+      const addonsSummaryEl = document.getElementById('addons-summary-wrapper');
+      if (addonsSummaryEl) addonsSummaryEl.innerHTML = '';
+      let hasAddons = false;
+
+      selectedAddonIds.forEach(id => {
+        const matched = customAddons.find(a => a.id === id);
+        if (matched && matched.enabled !== false) {
+          addOnsTotal += Number(matched.price);
+          hasAddons = true;
+          if (addonsSummaryEl) {
+            addonsSummaryEl.innerHTML += `
+              <div class="flex justify-between text-stone-400">
+                <span class="truncate pr-2">• ${matched.name}</span>
+                <span class="text-stone-300 font-medium">+$${Number(matched.price).toFixed(2)}</span>
+              </div>
+            `;
+          }
+        }
+      });
+
+      if (addonsSummaryEl) {
+        if (hasAddons) {
+          addonsSummaryEl.classList.remove('hidden');
+        } else {
+          addonsSummaryEl.classList.add('hidden');
+        }
+      }
+
+      const grandTotal = baseRentalPrice + candySubtotal + addOnsTotal;
+
+      const candyLineLabel = document.getElementById('candy-line-label');
+      if (candyLineLabel) candyLineLabel.innerText = `Selected Candies (${filledCandies.length}/9 Bins)`;
+
+      const candySubtotalEl = document.getElementById('candy-subtotal');
+      if (candySubtotalEl) candySubtotalEl.innerText = `$${candySubtotal.toFixed(2)}`;
+
+      const grandTotalEl = document.getElementById('grand-total');
+      if (grandTotalEl) grandTotalEl.innerText = `$${grandTotal.toFixed(2)}`;
+
+      const headerTotalEl = document.getElementById('header-total');
+      if (headerTotalEl) headerTotalEl.innerText = `$${grandTotal.toFixed(2)}`;
+
+      const mobileTotalEl = document.getElementById('mobile-total');
+      if (mobileTotalEl) mobileTotalEl.innerText = `$${grandTotal.toFixed(2)}`;
+
+      const baseDisplayEl = document.getElementById('base-rental-display');
+      if (baseDisplayEl) baseDisplayEl.innerText = `$${baseRentalPrice.toFixed(2)}`;
+    }
+
+    function openBookingModal() {
+      const modal = document.getElementById('booking-modal');
+      const candyList = document.getElementById('modal-candy-list');
+      const addonsList = document.getElementById('modal-addons-list');
+      
+      const quoteNoEl = document.getElementById('quote-number');
+      if (quoteNoEl) quoteNoEl.innerText = Math.floor(1000 + Math.random() * 9000);
+
+      const modalBaseEl = document.getElementById('modal-base-display');
+      if (modalBaseEl) modalBaseEl.innerText = `$${baseRentalPrice.toFixed(2)}`;
+
+      if (candyList) {
+        candyList.innerHTML = '';
+        const filledCandies = bins.map((c, i) => ({ candy: c, index: i + 1 })).filter(item => item.candy !== null);
+
+        if (filledCandies.length === 0) {
+          candyList.innerHTML = '<span class="text-amber-800 italic">No candies placed yet (Booth includes 9 empty acrylic bins).</span>';
+        } else {
+          filledCandies.forEach(({ candy, index }) => {
+            const row = document.createElement('div');
+            row.className = 'flex justify-between';
+            row.innerHTML = `
+              <span>Bin ${index}: ${candy.name}</span>
+              <span class="font-medium">$${Number(candy.price).toFixed(2)}</span>
+            `;
+            candyList.appendChild(row);
+          });
+        }
+      }
+
+      if (addonsList) {
+        addonsList.innerHTML = '';
+        let addonCount = 0;
+        selectedAddonIds.forEach(id => {
+          const matched = customAddons.find(a => a.id === id);
+          if (matched && matched.enabled !== false) {
+            addonCount++;
+            addonsList.innerHTML += `
+              <div class="flex justify-between">
+                <span>${matched.name}</span>
+                <span class="font-medium">+$${Number(matched.price).toFixed(2)}</span>
+              </div>
+            `;
+          }
+        });
+
+        if (addonCount === 0) {
+          addonsList.innerHTML = '<span class="text-stone-400 italic">No extra services selected</span>';
+        }
+      }
+
+      const modalTotalEl = document.getElementById('modal-total');
+      const grandTotalEl = document.getElementById('grand-total');
+      if (modalTotalEl && grandTotalEl) {
+        modalTotalEl.innerText = grandTotalEl.innerText;
+      }
+
+      const alertBox = document.getElementById('modal-alert-box');
+      if (alertBox) alertBox.classList.add('hidden');
+
+      if (modal) modal.classList.remove('hidden');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeBookingModal() {
+      const modal = document.getElementById('booking-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function submitReservation() {
+      const nameInput = document.getElementById('client-name');
+      const emailInput = document.getElementById('client-email');
+      const dateInput = document.getElementById('event-date');
+      const phoneInput = document.getElementById('client-phone');
+      const name = nameInput ? nameInput.value.trim() : '';
+      const email = emailInput ? emailInput.value.trim() : '';
+      const phone = phoneInput ? phoneInput.value.trim() : '';
+      const eventDate = dateInput ? dateInput.value : '';
+
+      // All four fields are required
+      const checks = [
+        { el: nameInput, ok: !!name, msg: 'Please enter your full name.' },
+        { el: emailInput, ok: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), msg: email ? 'Please enter a valid email address.' : 'Please enter your email address.' },
+        { el: phoneInput, ok: phone.replace(/\D/g, '').length >= 7, msg: phone ? 'Please enter a valid phone number.' : 'Please enter your phone number.' },
+        { el: dateInput, ok: !!eventDate, msg: 'Please choose your event date.' }
+      ];
+      const badClasses = ['border-red-400', 'ring-1', 'ring-red-300'];
+      checks.forEach(c => { if (c.el) c.el.classList.remove(...badClasses); });
+      const failed = checks.filter(c => !c.ok);
+      if (failed.length) {
+        failed.forEach(c => { if (c.el) c.el.classList.add(...badClasses); });
+        showToast(failed[0].msg);
+        if (failed[0].el) failed[0].el.focus();
+        return;
+      }
+      const formattedDate = new Date(eventDate + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+      // Build the specification text that gets emailed to you
+      const binsText = bins.map((c, i) => c ? `Bin ${i + 1}: ${c.name} ($${Number(c.price).toFixed(2)})` : `Bin ${i + 1}: [Empty]`).join('\n');
+      const addonLines = [];
+      selectedAddonIds.forEach(id => {
+        const matched = customAddons.find(a => a.id === id);
+        if (matched && matched.enabled !== false) {
+          addonLines.push(`- ${matched.name} ($${Number(matched.price).toFixed(2)})`);
+        }
+      });
+      const grandTotalEl = document.getElementById('grand-total');
+      const total = grandTotalEl ? grandTotalEl.innerText : '';
+      const quoteNoEl = document.getElementById('quote-number');
+      const quoteNo = quoteNoEl ? quoteNoEl.innerText : '';
+
+      const specification =
+`Quote #: ${quoteNo}
+Base Rental Fee: $${baseRentalPrice.toFixed(2)}
+
+CANDY SELECTIONS
+${binsText}
+
+ADD-ONS & SERVICES
+${addonLines.length ? addonLines.join('\n') : 'None'}
+
+ESTIMATED TOTAL: ${total}`;
+
+      if (!WEB3FORMS_ACCESS_KEY || WEB3FORMS_ACCESS_KEY === 'PASTE_YOUR_ACCESS_KEY_HERE') {
+        showToast('Email is not set up yet. Add your access key in the file.');
+        return;
+      }
+
+      const submitBtn = document.querySelector('button[onclick="submitReservation()"]');
+      const originalLabel = submitBtn ? submitBtn.innerText : '';
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Sending...'; }
+
+      try {
+        const response = await fetch('https://api.web3forms.com/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          body: JSON.stringify({
+            access_key: WEB3FORMS_ACCESS_KEY,
+            subject: `New Candy Wall Request from ${name}`,
+            from_name: brandName,
+            name: name,
+            email: email,
+            phone: phone,
+            event_date: formattedDate,
+            specification: specification
+          })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Send failed');
+
+        const alertBox = document.getElementById('modal-alert-box');
+        if (alertBox) alertBox.classList.remove('hidden');
+        const alertMsg = document.getElementById('modal-alert-msg');
+        if (alertMsg) {
+          alertMsg.innerText = `Thank you, ${name}! Your custom Candy Wall request has been sent. We will contact you personally soon.`;
+        }
+        if (typeof confetti === 'function') {
+          confetti({ particleCount: 70, spread: 80, origin: { y: 0.5 } });
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Sorry, something went wrong sending your request. Please try again.');
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = originalLabel; }
+      }
+    }
+
+    function copyQuoteToClipboard() {
+      const grandTotalEl = document.getElementById('grand-total');
+      const grandTotal = grandTotalEl ? grandTotalEl.innerText : '$150.00';
+      const filled = bins.map((c, i) => c ? `Bin ${i + 1}: ${c.name} ($${c.price})` : `Bin ${i + 1}: [Empty]`).join('\n');
+      
+      const chosenAddons = [];
+      selectedAddonIds.forEach(id => {
+        const matched = customAddons.find(a => a.id === id);
+        if (matched && matched.enabled !== false) {
+          chosenAddons.push(`- ${matched.name} ($${Number(matched.price).toFixed(2)})`);
+        }
+      });
+
+      const summaryText = 
+`--- ${brandName.toUpperCase()} CANDY WALL SPECIFICATION ---
+Base Rental Fee: $${baseRentalPrice.toFixed(2)}
+${filled}
+
+Selected Add-Ons & Services:
+${chosenAddons.length > 0 ? chosenAddons.join('\n') : 'None'}
+
+ESTIMATED TOTAL: ${grandTotal}
+Delivery & Setup: Included
+---------------------------------------------------`;
+
+      const textarea = document.createElement('textarea');
+      textarea.value = summaryText;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+
+      showToast('Detailed quote copied to clipboard!');
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = 'bg-stone-900 text-stone-100 text-xs px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 mb-2 transition-all duration-300 transform translate-y-3 opacity-0';
+      toast.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span>${msg}</span>`;
+
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-3', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 2600);
+    }
+    initAdminTabs();
+  </script>
+</body>
+</html>
